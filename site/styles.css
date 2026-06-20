@@ -1,5 +1,5 @@
 :root {
-  --bg: #070708;
+  --bg: #000000;
   --fg: #b9b6b0;
   --dim: #2a2a2c;
   --dimmer: #161618;
@@ -27,25 +27,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* --- atmosphere layers --- */
-.vignette {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
-  z-index: 5;
-}
-
-.grain {
-  position: fixed;
-  inset: -150%;
-  pointer-events: none;
-  opacity: 0.035;
-  z-index: 6;
-  background-image: repeating-radial-gradient(circle at 50% 50%, #fff 0, #fff 0.4px, transparent 0.8px, transparent 2px);
-  animation: grain 0.6s steps(2) infinite;
-  transition: opacity 1.6s ease;
-}
+/* solid black background — no grain, no vignette (only the text effect remains) */
 
 /* --- main stack --- */
 main {
@@ -205,11 +187,6 @@ main {
 /* --- keyframes --- */
 @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
-@keyframes grain {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-4%, 3%); }
-}
-
 @keyframes breathe {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 0.9; }
@@ -242,7 +219,6 @@ main.gl-chroma .ghost { animation: gl-chroma 0.16s steps(4) 2; }
    Only the faint wordmark remains; nothing animates, nothing reacts.
    Everything fades in (via the transitions above) when `dormant` is removed. */
 body.dormant { cursor: default; }
-body.dormant .grain { animation: none; opacity: 0; }
 body.dormant .cursor { animation: none; opacity: 0; }
 body.dormant .subtle,
 body.dormant .sigil,
@@ -252,7 +228,7 @@ body.dormant .corner { opacity: 0; }
 
 /* Accessibility: no glitch/heartbeat motion when reduced motion is set. */
 @media (prefers-reduced-motion: reduce) {
-  .grain, .cursor, .line, .subtle, .sigil,
+  .cursor, .line, .subtle, .sigil,
   .line.glitch, .sigil.opened,
   main.gl-chroma .line, main.gl-chroma .subtle, main.gl-chroma .sigil,
   main.gl-chroma .reveal, main.gl-chroma .ghost, .rabbit { animation: none !important; }

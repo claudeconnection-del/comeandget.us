@@ -128,7 +128,7 @@ test.describe("comeandget.us", () => {
     await page.goto("/root/");
     await expect(page).toHaveTitle(/root@comeandget/);
     await expect(page.locator("#rain")).toBeVisible();
-    await expect(page.locator("#out")).toContainText("checked in", { timeout: 5000 });
+    await expect(page.locator("#term")).toContainText("checked in", { timeout: 5000 });
 
     // the JWT (alg:none) must decode and point the solver onward to the DNS step
     const res = await page.request.get("/root/check-in.json");
@@ -139,5 +139,16 @@ test.describe("comeandget.us", () => {
     expect(payload.next.toLowerCase()).toContain("_rabbit");
 
     expect(errors, `unexpected errors: ${errors.join(" | ")}`).toEqual([]);
+  });
+
+  test("the faux terminal accepts commands", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "cat flag.txt");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("the prize is a reply");
+    // and it must not hand out the answer
+    await page.fill("#cmd", "help");
+    await page.press("#cmd", "Enter");
+    expect((await page.locator("#term").innerText()).toLowerCase()).not.toContain("conditional");
   });
 });
