@@ -45,20 +45,27 @@ main {
   position: relative;
   z-index: 2;
   width: min(92vw, 760px);
-  padding: 1.5rem;
+  padding: 1.4rem 1.6rem;
+  /* a console panel that dims the fire behind the text for legibility */
+  background: rgba(5, 3, 2, 0.68);
+  border: 1px solid rgba(255, 122, 24, 0.16);
+  border-radius: 8px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: 0 0 44px rgba(0, 0, 0, 0.6);
 }
 
 .term {
   font-size: clamp(0.8rem, 2.2vw, 1.05rem);
   line-height: 1.7;
-  color: var(--ember);
-  text-shadow: 0 0 10px rgba(255, 122, 24, 0.35);
+  color: #f4ecdd; /* warm white — high contrast against the orange fire */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 48vh;
   overflow-y: auto;
 }
-.term .muted { color: var(--ember-dim); }
+.term .muted { color: #c39e79; }
 
 /* interactive prompt */
 .cmdline {
