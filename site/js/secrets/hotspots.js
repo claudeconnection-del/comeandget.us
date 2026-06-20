@@ -9,6 +9,7 @@ export default {
 
     // Warm a hotspot when the cursor drifts near it.
     window.addEventListener("pointermove", (e) => {
+      if (!stage.state.awake) return;
       for (const h of hots) {
         const r = h.getBoundingClientRect();
         const cx = r.left + r.width / 2;
@@ -22,6 +23,7 @@ export default {
       const order = Number(h.dataset.order);
       const being = h.dataset.being;
       const mark = () => {
+        if (!stage.state.awake) return;
         if (!h.classList.contains("found")) {
           h.classList.add("found", "warm");
           stage.state.found.add(order);

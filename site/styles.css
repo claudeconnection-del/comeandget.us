@@ -44,6 +44,7 @@ body {
   z-index: 6;
   background-image: repeating-radial-gradient(circle at 50% 50%, #fff 0, #fff 0.4px, transparent 0.8px, transparent 2px);
   animation: grain 0.6s steps(2) infinite;
+  transition: opacity 1.6s ease;
 }
 
 .scanlines {
@@ -94,6 +95,7 @@ main {
   margin-left: 0.15em;
   color: var(--fg);
   animation: blink 1.1s steps(1) infinite;
+  transition: opacity 0.8s ease;
 }
 
 .subtle {
@@ -112,7 +114,7 @@ main {
   letter-spacing: 0.55em;
   color: var(--dimmer);
   text-indent: 0.55em;
-  transition: color 0.6s ease, text-shadow 0.6s ease;
+  transition: color 0.6s ease, text-shadow 0.6s ease, opacity 1.3s ease;
   user-select: text;
 }
 .sigil:hover { color: var(--dim); }
@@ -128,6 +130,7 @@ main {
   min-height: 2.4em;
   font-size: clamp(0.85rem, 2.2vw, 1.05rem);
   color: var(--fg);
+  transition: opacity 1.2s ease;
 }
 .reveal a {
   color: var(--blood);
@@ -147,7 +150,7 @@ main {
   color: var(--dimmer);
   letter-spacing: 0.18em;
   pointer-events: none;
-  transition: color 0.8s ease;
+  transition: color 0.8s ease, opacity 1.3s ease;
 }
 .corner:hover { color: var(--dim); }
 .tl { top: 1.1rem; left: 1.2rem; }
@@ -263,6 +266,17 @@ main.gl-tear { animation: gl-tear 0.3s steps(2) 1; }
   88%  { opacity: 1; }
   100% { top: 100%; opacity: 0; }
 }
+
+/* --- the feign: a still, near-empty page until it wakes ---
+   Only the faint wordmark remains; nothing animates, nothing reacts.
+   Everything fades in (via the transitions above) when `dormant` is removed. */
+body.dormant { cursor: default; }
+body.dormant .grain { animation: none; opacity: 0; }
+body.dormant .cursor { animation: none; opacity: 0; }
+body.dormant .subtle,
+body.dormant .sigil,
+body.dormant .reveal,
+body.dormant .corner { opacity: 0; }
 
 /* Accessibility: no glitch motion, no scan overlays, when reduced motion is set. */
 @media (prefers-reduced-motion: reduce) {

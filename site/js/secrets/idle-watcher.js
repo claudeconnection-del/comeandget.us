@@ -25,9 +25,11 @@ export default {
       );
     }
 
-    for (const ev of ["pointermove", "keydown", "pointerdown", "touchstart"]) {
-      window.addEventListener(ev, arm, { passive: true });
-    }
-    arm();
+    stage.onWake(() => {
+      for (const ev of ["pointermove", "keydown", "pointerdown", "touchstart"]) {
+        window.addEventListener(ev, arm, { passive: true });
+      }
+      arm();
+    });
   },
 };

@@ -17,13 +17,9 @@ export default {
       stage.el.count.textContent = visits > 1 ? `seen ${visits}×` : "seen once";
     }
 
-    if (visits === 2) {
-      setTimeout(() => stage.say("you came back.", { hold: 2600 }), 2600);
-    } else if (visits >= 3) {
-      setTimeout(
-        () => stage.say(`${visits} times now. we're flattered.`, { hold: 2600 }),
-        2600
-      );
+    if (visits >= 2) {
+      const msg = visits === 2 ? "you came back." : `${visits} times now. we're flattered.`;
+      stage.onWake(() => setTimeout(() => stage.say(msg, { hold: 2600 }), 2600));
     }
   },
 };

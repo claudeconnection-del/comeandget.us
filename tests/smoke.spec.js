@@ -34,6 +34,7 @@ const SHIPPED = [
   "/js/secrets/hotspots.js",
   "/js/secrets/idle-watcher.js",
   "/js/secrets/motion-glitch.js",
+  "/js/secrets/ambient-glitch.js",
   "/js/secrets/memory.js",
   "/js/secrets/konami.js",
 ];
@@ -46,23 +47,30 @@ test.describe("comeandget.us", () => {
       if (m.type() === "error") errors.push(m.text());
     });
 
-    await page.goto("/");
+    await page.goto("/?wake=0");
     await expect(page).toHaveTitle("comeandget.us");
-    await expect(page.locator("#line")).toContainText("you weren't supposed to find this.");
     await expect(page.locator("#sigil")).toHaveAttribute("data-sigil", "IFBAQTBBZXHEENZRGHYEGTSZYUNAUBZTMN");
 
     expect(errors, `unexpected console/page errors: ${errors.join(" | ")}`).toEqual([]);
   });
 
+  test("the feign: the page stays inert until it wakes", async ({ page }) => {
+    await page.goto("/"); // default 60s feign — do not wait it out
+    await expect(page.locator("body")).toHaveClass(/dormant/);
+    await page.keyboard.type("MOTHMAN"); // must not respond while dormant
+    await expect(page.locator("#sigil")).not.toHaveClass(/opened/);
+    await expect(page.locator("#door")).toHaveCount(0);
+  });
+
   test("a hidden being reveals on contact", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?wake=0");
     await page.locator(".hot1").dispatchEvent("pointerenter");
     await expect(page.locator("#reveal")).toContainText("Manananggal");
     await expect(page.locator("#reveal")).toContainText("1 / 7");
   });
 
   test("the true key unseals the sigil and opens the mailbox", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?wake=0");
 
     // a wrong word must NOT open it
     await page.keyboard.type("WENDIGO");
@@ -81,7 +89,7 @@ test.describe("comeandget.us", () => {
   test("the final answer never appears in any shipped file or the DOM", async ({ page }) => {
     test.skip(!NEEDLE, "set PUZZLE_ANSWER or secret/answer.txt to enable the leak guard");
 
-    await page.goto("/");
+    await page.goto("/?wake=0");
     await page.keyboard.type("MOTHMAN"); // fully solved state — still must not contain the answer
     await expect(page.locator("#door")).toBeVisible();
     expect((await page.content()).toLowerCase(), "DOM leaks the answer").not.toContain(NEEDLE);

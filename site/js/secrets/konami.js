@@ -11,6 +11,7 @@ export default {
   init(stage) {
     let i = 0;
     window.addEventListener("keydown", (e) => {
+      if (!stage.state.awake) return;
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       i = key === SEQ[i].toLowerCase() ? i + 1 : key === SEQ[0].toLowerCase() ? 1 : 0;
       if (i === SEQ.length) {

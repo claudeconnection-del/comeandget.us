@@ -8,6 +8,7 @@ export default {
     let cooldown = 0;
 
     window.addEventListener("pointermove", (e) => {
+      if (!stage.state.awake) return;
       const now = performance.now();
       if (last) {
         const dt = now - last.t || 1;

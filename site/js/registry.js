@@ -23,9 +23,11 @@ export function createStage() {
   const state = {
     found: new Set(), // orders of discovered beings
     opened: false,
+    awake: false, // the feign: nothing reacts until the page wakes
   };
 
   let restore = null;
+  const wakeCbs = [];
 
   const stage = {
     el,
@@ -51,6 +53,28 @@ export function createStage() {
 
     reveal(html) {
       if (el.reveal) el.reveal.innerHTML = html;
+    },
+
+    // Run fn when the page wakes (or now, if it already has). Reactive secrets
+    // use this so they stay completely inert during the 60s feign.
+    onWake(fn) {
+      if (state.awake) {
+        try { fn(); } catch (e) { console.error("[onWake]", e); }
+      } else {
+        wakeCbs.push(fn);
+      }
+    },
+
+    // End the feign: lift dormancy, release every waiting secret, and let the
+    // page betray itself with one unmistakable stutter.
+    wake() {
+      if (state.awake) return;
+      state.awake = true;
+      document.body.classList.remove("dormant");
+      for (const fn of wakeCbs.splice(0)) {
+        try { fn(); } catch (e) { console.error("[wake]", e); }
+      }
+      this.glitchBurst(1200);
     },
 
     // One intermittent glitch. "mild" = a quick, subtle artifact (the ambient

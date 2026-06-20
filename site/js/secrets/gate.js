@@ -41,6 +41,7 @@ export default {
     }
 
     window.addEventListener("keydown", async (e) => {
+      if (!stage.state.awake) return;
       if (e.key && e.key.length === 1 && /[a-z]/i.test(e.key)) {
         buffer = (buffer + e.key.toUpperCase()).slice(-24);
       } else {
@@ -62,6 +63,7 @@ export default {
     // Solvers who decrypt offline can also just click the sealed sigil
     // once they believe — but it stays sealed without the spoken name.
     sigil.addEventListener("click", () => {
+      if (!stage.state.awake) return;
       if (!stage.state.opened) stage.say("it's sealed. speak, don't touch.");
     });
   },

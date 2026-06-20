@@ -37,9 +37,10 @@ export default {
 
     document.addEventListener("visibilitychange", () => {
       paused = document.hidden;
-      if (!paused) schedule(wait(1500, 2000));
+      if (!paused && stage.state.awake) schedule(wait(1500, 2000));
     });
 
-    schedule(wait(2500, 3000)); // first stutter shortly after arrival
+    // Stays silent through the feign; first stutter comes after the page wakes.
+    stage.onWake(() => schedule(wait(1200, 2500)));
   },
 };
