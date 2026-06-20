@@ -151,4 +151,19 @@ test.describe("comeandget.us", () => {
     await page.press("#cmd", "Enter");
     expect((await page.locator("#term").innerText()).toLowerCase()).not.toContain("conditional");
   });
+
+  test("the terminal honeypot is explorable and never leaks the answer", async ({ page }) => {
+    await page.goto("/root/");
+    const type = async (c) => { await page.fill("#cmd", c); await page.press("#cmd", "Enter"); };
+    await type("ls -a");
+    await type("cd .keys");
+    await type("cat skeleton");
+    await expect(page.locator("#term")).toContainText("fits every lock");
+    for (const c of ["find key", "fortune", "rabbit", "ps", "cat /var/log/auth.log", "dsregcmd", "cowsay hi"]) {
+      await type(c);
+    }
+    const txt = (await page.locator("#term").innerText()).toLowerCase();
+    expect(txt).not.toContain("conditional");
+    expect(txt).not.toContain("indrid");
+  });
 });
