@@ -1,4 +1,4 @@
-import { vigenere, sha256hex } from "../crypto.js";
+import { vigenere, sha256hex } from "../glyphs.js";
 
 // sha256("MOTHMAN") — the key itself is never stored, only this fingerprint.
 const KEY_HASH = "94ab9ea33d821423babf837af3a3dc89d6dd62c9badf655708f98896fecc427d";

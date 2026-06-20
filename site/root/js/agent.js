@@ -1,5 +1,5 @@
-import { createRain } from "./matrix.js";
-import { initTerminal } from "./terminal.js";
+import { createRain } from "./rain.js";
+import { initTerminal } from "./shell.js";
 
 const rain = createRain(document.getElementById("rain"));
 

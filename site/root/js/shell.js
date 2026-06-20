@@ -4,9 +4,9 @@
 // none of it ever names the answer. Output is appended as text nodes (no
 // innerHTML), so typed input can never inject markup.
 
-import { startGame } from "./game.js";
-import { startDoom } from "./doom.js";
-import { startSnake } from "./snake.js";
+import { startGame } from "./arcade.js";
+import { startDoom } from "./descent.js";
+import { startSnake } from "./serpent.js";
 
 export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   function println(text = "") {

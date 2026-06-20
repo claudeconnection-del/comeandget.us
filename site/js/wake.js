@@ -1,12 +1,12 @@
-import { createStage, boot } from "./registry.js";
+import { createStage, boot } from "./stage.js";
 
-import gate from "./secrets/gate.js";
-import hotspots from "./secrets/hotspots.js";
-import idleWatcher from "./secrets/idle-watcher.js";
-import motionGlitch from "./secrets/motion-glitch.js";
-import ambientGlitch from "./secrets/ambient-glitch.js";
-import memory from "./secrets/memory.js";
-import konami from "./secrets/konami.js";
+import gate from "./whispers/threshold.js";
+import hotspots from "./whispers/lures.js";
+import idleWatcher from "./whispers/stillness.js";
+import motionGlitch from "./whispers/tremor.js";
+import ambientGlitch from "./whispers/flux.js";
+import memory from "./whispers/echoes.js";
+import konami from "./whispers/relic.js";
 
 const stage = createStage();
 
