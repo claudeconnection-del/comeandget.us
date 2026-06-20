@@ -5,6 +5,8 @@
 // innerHTML), so typed input can never inject markup.
 
 import { startGame } from "./game.js";
+import { startDoom } from "./doom.js";
+import { startSnake } from "./snake.js";
 
 export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   function println(text = "") {
@@ -228,8 +230,8 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
       "commands: help  whoami  sudo  ls [-a]  cd <dir>  cat <file>  pwd  find <x>  tree",
       "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
       "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
-      "          man <x>  echo <x>  theme <name>  ritual  galaga  games  clear  exit",
-      "          ...and many more you'll have to find.",
+      "          man <x>  echo <x>  theme <name>  ritual  games  clear  exit",
+      "          arcade: galaga  doom  snake     ...and many more you'll have to find.",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
     "?": () => CMD.help(),
@@ -518,21 +520,24 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   }
 
   // --- themes (recolour terminal + rain) ---
-  function applyTheme(name) {
+  function applyTheme(name, quiet) {
     const th = THEMES[name];
     if (!th) return `no such theme '${name}'. try: theme list`;
     for (const [k, v] of Object.entries(th.vars)) document.documentElement.style.setProperty(k, v);
     if (setPalette && th.rain) setPalette(th.rain);
-    if (flare) flare(700);
-    surge(450);
+    try { localStorage.setItem("cg.theme", name); } catch {}
+    if (!quiet) { if (flare) flare(700); surge(450); }
     return `palette set: ${name}.`;
   }
   CMD.theme = (io) => {
-    const name = (io.tokens[0] || "").toLowerCase();
-    if (!name || name === "list") return "themes: " + Object.keys(THEMES).join("  ") + "\nusage: theme <name>";
+    let name = (io.tokens[0] || "").toLowerCase();
+    if (!name || name === "list") return "themes: " + Object.keys(THEMES).join("  ") + "   (sticks across reloads)\nusage: theme <name>   |   theme random";
+    if (name === "random") { const ks = Object.keys(THEMES); name = ks[(Math.random() * ks.length) | 0]; }
     return applyTheme(name);
   };
   CMD.themes = () => CMD.theme({ tokens: ["list"] });
+  // restore a previously chosen theme (quietly) on load
+  try { const saved = localStorage.getItem("cg.theme"); if (saved && THEMES[saved]) applyTheme(saved, true); } catch {}
 
   // --- multi-step unlock ritual (flares harder each step) ---
   function startRitual() {
@@ -577,18 +582,66 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   CMD.seance = () => startRitual();
 
   // --- arcade ---
-  function startArcade() {
+  function launch(starter) {
     if (state.gaming) return "";
     state.gaming = true;
     surge(700);
-    startGame({ term, input, flare, surge, onExit: (msg) => { state.gaming = false; println(msg); } });
+    starter({ term, input, flare, surge, onExit: (msg) => { state.gaming = false; println(msg); } });
     return "";
   }
-  CMD.galaga = () => startArcade();
-  CMD.invaders = () => startArcade();
-  CMD.arcade = () => startArcade();
-  CMD.game = () => startArcade();
-  CMD.games = () => "arcade: galaga   (also try: theme <name>, ritual, fortune)";
+  CMD.galaga = () => launch(startGame);
+  CMD.invaders = () => launch(startGame);
+  CMD.arcade = () => launch(startGame);
+  CMD.game = () => launch(startGame);
+  CMD.doom = () => launch(startDoom);
+  CMD.descent = () => launch(startDoom);
+  CMD.e1m1 = () => launch(startDoom);
+  CMD.snake = () => launch(startSnake);
+  CMD.games = () => "arcade: galaga   doom   snake   (also: theme <name>, ritual, fortune)";
+
+  // --- man: documents only the fun parts ---
+  const MANPAGES = {
+    galaga: "GALAGA(6) — two waves and a boss. arrows move, space fires, q quits.",
+    doom: "DOOM(6) — E1M1, an ASCII raycaster. wasd/arrows move & turn, space fires, q quits. find the $ exit or clear the imps.",
+    snake: "SNAKE(6) — eat the *, don't bite the walls or yourself. arrows/wasd steer, q quits.",
+    theme: "THEME(1) — recolours terminal AND rain. fire matrix ice amber blood vapor mono. sticks across reloads. 'theme random' rolls.",
+    ritual: "RITUAL(7) — speak the four words of this place, in order. it opens onto nothing. that is the point.",
+    fortune: "FORTUNE(6) — the rain's unsolicited opinion of you.",
+    fire: "FIRE(1) — stokes the rain. cosmetic. deeply satisfying.",
+    decode: "DECODE(1) — base64 or a JWT. the only genuinely useful tool in this room.",
+    cowsay: "COWSAY(1) — a cow repeats you. wisdom not included.",
+    hint: "HINT(1) — points at the real path without walking it for you.",
+    "8ball": "8BALL(1) — ask a yes/no question. the rain answers.",
+  };
+  CMD.man = (io) => {
+    const t = (io.tokens[0] || "").toLowerCase();
+    if (!t) return "man <command>. documented (the fun ones): " + Object.keys(MANPAGES).join("  ");
+    return MANPAGES[t] || `no manual entry for ${t}. (most of this place is undocumented on purpose.)`;
+  };
+
+  // --- a grab-bag of extra toys ---
+  const rot13 = (s) => s.replace(/[a-z]/gi, (c) => {
+    const base = c <= "Z" ? 65 : 97;
+    return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+  });
+  CMD.rot13 = (io) => rot13(io.rest || "");
+  CMD.reverse = (io) => (io.rest || "").split("").reverse().join("");
+  CMD.upper = (io) => (io.rest || "").toUpperCase();
+  CMD.lower = (io) => (io.rest || "").toLowerCase();
+  CMD.leet = (io) => (io.rest || "").replace(/[aeiostAEIOST]/g, (c) => ({ a: "4", e: "3", i: "1", o: "0", s: "5", t: "7", A: "4", E: "3", I: "1", O: "0", S: "5", T: "7" }[c]));
+  CMD.hex = (io) => { const n = parseInt(io.rest, 10); return Number.isFinite(n) ? "0x" + n.toString(16) : "hex <number>"; };
+  CMD.bin = (io) => { const n = parseInt(io.rest, 10); return Number.isFinite(n) ? "0b" + n.toString(2) : "bin <number>"; };
+  CMD.flip = () => (Math.random() < 0.5 ? "heads. we win." : "tails. we still win.");
+  CMD.roll = (io) => { const m = /(\d*)d(\d+)/i.exec(io.rest || "d6"); const n = Math.min(20, (m && +m[1]) || 1), s = (m && +m[2]) || 6; const out = []; let t = 0; for (let i = 0; i < n; i++) { const r = 1 + rng(s); t += r; out.push(r); } return `${out.join(" + ")} = ${t}`; };
+  CMD["8ball"] = (io) => { sigh(); return io.rest ? pick(["yes.", "no.", "ask the rain again.", "the gate decides, not you.", "already happening.", "not in this tenant.", "outlook: ominous."]) : "8ball <a yes/no question>"; };
+  CMD.rps = (io) => { const t = (io.rest || "").toLowerCase(); const us = pick(["rock", "paper", "scissors"]); if (!["rock", "paper", "scissors"].includes(t)) return "rps <rock|paper|scissors>"; const beats = { rock: "scissors", paper: "rock", scissors: "paper" }; return `we threw ${us}. ` + (us === t ? "tie. unsettling." : beats[us] === t ? "you win. enjoy it." : "we win. obviously."); };
+  CMD.tarot = () => "you draw: " + pick(["The Tower (reversed)", "The Moth", "The Bridge", "Death (it's fine)", "The Watcher", "The Door", "The Hermit, online"]);
+  CMD.omen = () => pick(["a bird flies backward.", "the lights dim three times.", "your battery drops one percent.", "something, somewhere, agrees with you."]);
+  CMD.scream = () => { if (flare) flare(1400); surge(600); return "the rain swallows it. nothing echoes here."; };
+  CMD.pray = () => "to whom? we're the only ones listening.";
+  CMD.exorcise = () => "too late. it's load-bearing now.";
+  CMD.weather = () => "forecast: rain, then fire, then rain. as usual.";
+  CMD.whois = () => "domain: comeandget.us\nregistrant: redacted\nstatus: watching\nnameservers: the ones you came through";
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();

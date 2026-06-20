@@ -1,24 +1,32 @@
-// A tiny ASCII Galaga/Invaders, played inside the terminal. It takes over the
-// keyboard and renders frames into #term, then fully restores the terminal on
-// exit (win, death, or quit). Self-contained; one game at a time.
+// ASCII Galaga/Invaders with two waves and a boss, played inside the terminal.
+// Arrows move, space fires, q quits. Wave 1 is a row of grunts; clear it and
+// wave 2 drops more plus a boss that eats several hits. Self-contained with
+// clean teardown that restores the terminal.
 
 export function startGame({ term, input, flare, surge, onExit }) {
   const W = 40;
-  const H = 14;
-  const TARGET = 8;
+  const H = 16;
 
   let px = (W / 2) | 0;
   let bullets = [];
   let enemies = [];
+  let boss = null;
   let dir = 1;
   let score = 0;
+  let wave = 1;
   let tick = 0;
   let over = false;
   let won = false;
 
-  for (let r = 0; r < 2; r++) {
-    for (let c = 4; c < W - 4; c += 4) enemies.push({ x: c, y: r + 1, alive: true });
+  function spawnWave(n) {
+    enemies = [];
+    const rows = n === 1 ? 1 : 2;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 4; c < W - 4; c += 4) enemies.push({ x: c, y: r + 1, alive: true });
+    }
+    if (n >= 2) boss = { x: (W / 2) | 0, y: 1, hp: 6, alive: true };
   }
+  spawnWave(1);
 
   const savedHTML = term.innerHTML;
   const savedMax = term.style.maxHeight;
@@ -28,19 +36,16 @@ export function startGame({ term, input, flare, surge, onExit }) {
 
   function onKey(e) {
     const k = e.key;
-    if (["ArrowLeft", "ArrowRight", "ArrowUp", " ", "Spacebar", "q", "Q", "Escape"].includes(k)) {
-      e.preventDefault();
-    }
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", " ", "Spacebar", "q", "Q", "Escape"].includes(k)) e.preventDefault();
     if (k === "ArrowLeft") px = Math.max(1, px - 1);
     else if (k === "ArrowRight") px = Math.min(W - 2, px + 1);
     else if (k === " " || k === "Spacebar" || k === "ArrowUp") {
-      if (bullets.length < 3) { bullets.push({ x: px, y: H - 2 }); flare && flare(150); }
+      if (bullets.length < 4) { bullets.push({ x: px, y: H - 2 }); flare && flare(140); }
     } else if (k === "q" || k === "Q" || k === "Escape") {
       end("you bailed. they respect that. a little.");
     }
   }
   window.addEventListener("keydown", onKey, true);
-
   const timer = setInterval(step, 90);
 
   function step() {
@@ -56,22 +61,34 @@ export function startGame({ term, input, flare, surge, onExit }) {
       if (edge) { dir *= -1; enemies.forEach((en) => { if (en.alive) en.y += 1; }); }
       else enemies.forEach((en) => { if (en.alive) en.x += dir; });
     }
+    if (boss && boss.alive && tick % 2 === 0) {
+      boss.x += dir;
+      if (boss.x <= 1 || boss.x >= W - 2) boss.x = Math.max(1, Math.min(W - 2, boss.x));
+    }
 
     bullets.forEach((b) => {
       enemies.forEach((en) => {
-        if (en.alive && en.x === b.x && en.y === b.y) {
-          en.alive = false; b.y = -1; score++; flare && flare(280); surge && surge(200);
-        }
+        if (en.alive && en.x === b.x && en.y === b.y) { en.alive = false; b.y = -1; score++; flare && flare(280); surge && surge(180); }
       });
+      if (boss && boss.alive && b.y === boss.y && Math.abs(b.x - boss.x) <= 1) {
+        boss.hp--; b.y = -1; flare && flare(340); surge && surge(240);
+        if (boss.hp <= 0) { boss.alive = false; score += 5; }
+      }
     });
     bullets = bullets.filter((b) => b.y >= 0);
 
-    if (enemies.some((en) => en.alive && en.y >= H - 1)) {
-      return end("an enemy reached the line. life lost. GAME OVER.");
-    }
-    if (score >= TARGET || enemies.every((en) => !en.alive)) {
-      won = true;
-      return end("WAVE CLEARED. the rain salutes you.");
+    if (enemies.some((en) => en.alive && en.y >= H - 1)) return end("an enemy reached the line. GAME OVER.");
+
+    if (enemies.every((en) => !en.alive) && (!boss || !boss.alive)) {
+      if (wave === 1) {
+        wave = 2;
+        spawnWave(2);
+        flare && flare(1200);
+        surge && surge(700);
+      } else {
+        won = true;
+        return end("BOSS DOWN. both waves cleared. the rain salutes you.");
+      }
     }
     render();
   }
@@ -79,9 +96,13 @@ export function startGame({ term, input, flare, surge, onExit }) {
   function render() {
     const grid = Array.from({ length: H }, () => Array(W).fill(" "));
     enemies.forEach((en) => { if (en.alive && en.y >= 0 && en.y < H) grid[en.y][en.x] = "W"; });
+    if (boss && boss.alive) {
+      for (let dx = -1; dx <= 1; dx++) if (boss.x + dx >= 0 && boss.x + dx < W) grid[boss.y][boss.x + dx] = "M";
+    }
     bullets.forEach((b) => { if (b.y >= 0 && b.y < H) grid[b.y][b.x] = "|"; });
     grid[H - 1][px] = "A";
-    const hud = ` SCORE ${score}/${TARGET}    [<- ->] move   [space] fire   [q] quit`;
+    const bossHp = boss && boss.alive ? `  BOSS ${"♥".repeat(boss.hp)}` : "";
+    const hud = ` WAVE ${wave}   SCORE ${score}${bossHp}    [<- ->] move  [space] fire  [q] quit`;
     term.textContent = hud + "\n" + grid.map((r) => r.join("")).join("\n");
   }
 

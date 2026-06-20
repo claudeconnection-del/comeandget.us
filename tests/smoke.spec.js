@@ -193,4 +193,35 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#term")).toContainText("score");
     await expect(page.locator("#cmd")).toBeEnabled();
   });
+
+  test("doom raycaster starts and quits cleanly", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "doom");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("E1M1");
+    await page.keyboard.press("q");
+    await expect(page.locator("#cmd")).toBeEnabled();
+  });
+
+  test("snake starts and quits cleanly", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "snake");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("SNAKE");
+    await page.keyboard.press("q");
+    await expect(page.locator("#cmd")).toBeEnabled();
+  });
+
+  test("man documents the fun parts and themes persist across reload", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "man doom");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("raycaster");
+    await page.fill("#cmd", "theme matrix");
+    await page.press("#cmd", "Enter");
+    await page.reload();
+    await page.waitForTimeout(200);
+    const ember = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--ember").trim());
+    expect(ember.toLowerCase()).toBe("#00ff66");
+  });
 });
