@@ -65,8 +65,9 @@ export function createStage() {
       }
     },
 
-    // End the feign: lift dormancy, release every waiting secret, and let the
-    // page betray itself with one unmistakable stutter.
+    // End the feign: lift dormancy and release every waiting secret. The "tell"
+    // is a smooth power-on — chroma shimmer + a sweep + scanlines — with no
+    // positional tearing (no gl-tear), so nothing jumps between two spots.
     wake() {
       if (state.awake) return;
       state.awake = true;
@@ -74,7 +75,21 @@ export function createStage() {
       for (const fn of wakeCbs.splice(0)) {
         try { fn(); } catch (e) { console.error("[wake]", e); }
       }
-      this.glitchBurst(1200);
+      if (reduceMotion()) return;
+      const target = el.stage;
+      if (target) {
+        target.classList.add("gl-chroma");
+        setTimeout(() => target.classList.remove("gl-chroma"), 650);
+      }
+      if (el.scanbar) {
+        el.scanbar.classList.remove("sweep");
+        void el.scanbar.offsetWidth;
+        el.scanbar.classList.add("sweep");
+      }
+      if (el.scanlines) {
+        el.scanlines.classList.add("on");
+        setTimeout(() => el.scanlines.classList.remove("on"), 1100);
+      }
     },
 
     // One intermittent glitch. "mild" = a quick, subtle artifact (the ambient
