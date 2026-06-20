@@ -229,12 +229,10 @@ main {
 }
 
 @keyframes glitch {
-  0%   { transform: translate(0) skewX(0); text-shadow: -2px 0 var(--blood), 2px 0 #1e8a8a; }
-  20%  { transform: translate(-2px, 1px) skewX(2deg); }
-  40%  { transform: translate(2px, -1px) skewX(-3deg); text-shadow: 2px 0 var(--blood), -2px 0 #1e8a8a; }
-  60%  { transform: translate(-1px, -1px) skewX(1deg); }
-  80%  { transform: translate(1px, 1px); text-shadow: -1px 0 var(--blood), 1px 0 #1e8a8a; }
-  100% { transform: translate(0); text-shadow: none; }
+  0%   { text-shadow: -2px 0 var(--blood), 2px 0 #1e8a8a; }
+  40%  { text-shadow: 2px 0 var(--blood), -2px 0 #1e8a8a; }
+  80%  { text-shadow: -1px 0 var(--blood), 1px 0 #1e8a8a; }
+  100% { text-shadow: none; }
 }
 
 /* --- intermittent glitch repertoire (applied briefly to <main>) ---
@@ -251,21 +249,23 @@ main.gl-chroma .sigil,
 main.gl-chroma .reveal,
 main.gl-chroma .ghost { animation: gl-chroma 0.22s steps(2) 1; }
 
+/* opacity flicker only — no transform, so the content never shifts position */
 @keyframes gl-mild {
-  0%, 100% { transform: translate(0) skewX(0); opacity: 1; }
-  20% { transform: translate(-2px, 1px) skewX(2deg); opacity: 0.82; }
-  45% { transform: translate(2px, -1px) skewX(-2deg); opacity: 0.96; }
-  70% { transform: translate(-1px, 0) skewX(1deg); opacity: 0.7; }
+  0%, 100% { opacity: 1; }
+  25% { opacity: 0.78; }
+  50% { opacity: 0.95; }
+  75% { opacity: 0.66; }
 }
 main.gl-mild { animation: gl-mild 0.2s steps(2) 1; }
 
+/* signal tear: reveals horizontal bands in place — no sideways slide */
 @keyframes gl-tear {
-  0%   { clip-path: inset(0 0 0 0); transform: translateX(0); }
-  20%  { clip-path: inset(10% 0 74% 0); transform: translateX(-6px); }
-  40%  { clip-path: inset(52% 0 30% 0); transform: translateX(5px); }
-  60%  { clip-path: inset(28% 0 52% 0); transform: translateX(-4px); }
-  80%  { clip-path: inset(70% 0 10% 0); transform: translateX(4px); }
-  100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+  0%   { clip-path: inset(0 0 0 0); }
+  20%  { clip-path: inset(10% 0 74% 0); }
+  40%  { clip-path: inset(52% 0 30% 0); }
+  60%  { clip-path: inset(28% 0 52% 0); }
+  80%  { clip-path: inset(70% 0 10% 0); }
+  100% { clip-path: inset(0 0 0 0); }
 }
 main.gl-tear { animation: gl-tear 0.3s steps(2) 1; }
 
