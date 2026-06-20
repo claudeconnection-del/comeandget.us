@@ -4,6 +4,7 @@
   --ember-dim: #7a3a0c;
   --ash: #c9a98a;
   --spark: #ffd27a;
+  --term-fg: #f4ecdd;
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 }
 
@@ -48,24 +49,39 @@ main {
   padding: 1.4rem 1.6rem;
   /* a console panel that dims the fire behind the text for legibility */
   background: rgba(5, 3, 2, 0.68);
-  border: 1px solid rgba(255, 122, 24, 0.16);
+  border: 1px solid color-mix(in srgb, var(--ember) 18%, transparent);
   border-radius: 8px;
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   box-shadow: 0 0 44px rgba(0, 0, 0, 0.6);
 }
+/* a living, themed border that breathes — and surges on events */
+main::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid var(--ember);
+  opacity: 0.06;
+  pointer-events: none;
+  animation: borderpulse 4.5s ease-in-out infinite;
+}
+main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
+@keyframes borderpulse { 0%, 100% { opacity: 0.05; } 50% { opacity: 0.26; } }
 
 .term {
   font-size: clamp(0.8rem, 2.2vw, 1.05rem);
   line-height: 1.7;
-  color: #f4ecdd; /* warm white — high contrast against the orange fire */
+  color: var(--term-fg); /* light, themed — high contrast against the fire */
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 48vh;
   overflow-y: auto;
 }
-.term .muted { color: #c39e79; }
+.term .muted { color: var(--ash); }
+/* while the arcade is running, show the whole playfield, no wrap/scroll */
+.term.gaming { max-height: none; overflow: hidden; white-space: pre; line-height: 1.2; }
 
 /* interactive prompt */
 .cmdline {
@@ -114,4 +130,5 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   .cursor { animation: none; }
+  main::before { animation: none; opacity: 0.14; }
 }

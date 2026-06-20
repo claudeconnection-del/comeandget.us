@@ -4,7 +4,9 @@
 // none of it ever names the answer. Output is appended as text nodes (no
 // innerHTML), so typed input can never inject markup.
 
-export function initTerminal({ term, input, form, decode, flare }) {
+import { startGame } from "./game.js";
+
+export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   function println(text = "") {
     term.appendChild(document.createTextNode((Array.isArray(text) ? text.join("\n") : text) + "\n"));
     term.scrollTop = term.scrollHeight;
@@ -12,6 +14,16 @@ export function initTerminal({ term, input, form, decode, flare }) {
   const rng = (n) => (Math.random() * n) | 0;
   const pick = (a) => a[rng(a.length)];
   const sigh = () => flare && flare(220);
+
+  // pulse the console border (themed via --ember)
+  const mainEl = document.querySelector("main");
+  let surgeTimer = null;
+  function surge(ms = 240) {
+    if (!mainEl) return;
+    mainEl.classList.add("surge");
+    clearTimeout(surgeTimer);
+    surgeTimer = setTimeout(() => mainEl.classList.remove("surge"), ms);
+  }
 
   // ---- a fake filesystem -------------------------------------------------
   const D = (children) => ({ t: "d", c: children });
@@ -68,7 +80,30 @@ export function initTerminal({ term, input, form, decode, flare }) {
     }),
   });
 
-  const state = { cwd: ["root"] };
+  const state = { cwd: ["root"], gaming: false, ritual: null };
+
+  const MOTD = {
+    "/root": "you are home. or what's left of it.",
+    "/var": "everything that changes, changes here.",
+    "/var/log": "logs never lie. people do.",
+    "/etc": "configuration is destiny.",
+    "/proc": "the machine, naked.",
+    "/home": "nobody's really home.",
+    "/dev": "where everything goes to be forgotten.",
+    "/root/.keys": "keys for locks that no longer exist.",
+    "/root/.ssh": "trust, cached.",
+  };
+
+  const THEMES = {
+    fire: { vars: { "--bg": "#060402", "--ember": "#ff7a18", "--spark": "#ffd27a", "--ash": "#c9a98a", "--term-fg": "#f4ecdd" }, rain: { fade: "6,4,2", glow: "#ff5200", deep: "#a8330a", body: "#ff6f16", bodyHot: "#ffa648", head: "#ffe2a6", headHot: "#fff7da", ember: ["#ffe9ad", "#ff7a18", "#b3271e"] } },
+    matrix: { vars: { "--bg": "#000600", "--ember": "#00ff66", "--spark": "#b9ffcf", "--ash": "#5fae7f", "--term-fg": "#d7ffe6" }, rain: { fade: "0,6,0", glow: "#00ff66", deep: "#0a7a33", body: "#19c764", bodyHot: "#7dffa8", head: "#d7ffe6", headHot: "#ffffff", ember: ["#d7ffe6", "#19c764", "#0a7a33"] } },
+    ice: { vars: { "--bg": "#02060a", "--ember": "#38bdf8", "--spark": "#bae6fd", "--ash": "#7fb0c8", "--term-fg": "#e6f6ff" }, rain: { fade: "2,6,10", glow: "#38bdf8", deep: "#0c4a6e", body: "#2aa6e0", bodyHot: "#9bd8f6", head: "#e6f6ff", headHot: "#ffffff", ember: ["#e6f6ff", "#38bdf8", "#0c4a6e"] } },
+    amber: { vars: { "--bg": "#0a0600", "--ember": "#ffb000", "--spark": "#ffe08a", "--ash": "#d8b878", "--term-fg": "#fff3d6" }, rain: { fade: "10,6,0", glow: "#ff8c00", deep: "#7a4a00", body: "#ffb000", bodyHot: "#ffd36b", head: "#fff3d6", headHot: "#ffffff", ember: ["#fff3d6", "#ffb000", "#7a4a00"] } },
+    blood: { vars: { "--bg": "#080000", "--ember": "#ff3b3b", "--spark": "#ffb3b3", "--ash": "#cc8888", "--term-fg": "#ffe6e6" }, rain: { fade: "8,0,0", glow: "#ff1a1a", deep: "#5a0a0a", body: "#e02222", bodyHot: "#ff6b6b", head: "#ffe0e0", headHot: "#ffffff", ember: ["#ffe0e0", "#e02222", "#5a0a0a"] } },
+    vapor: { vars: { "--bg": "#080010", "--ember": "#c77dff", "--spark": "#f0c6ff", "--ash": "#b39ddb", "--term-fg": "#f3e6ff" }, rain: { fade: "6,0,12", glow: "#b14bff", deep: "#3a155e", body: "#a855f7", bodyHot: "#d8a6ff", head: "#f3e6ff", headHot: "#ffffff", ember: ["#f3e6ff", "#ff6ad5", "#a855f7"] } },
+    mono: { vars: { "--bg": "#040404", "--ember": "#cccccc", "--spark": "#ffffff", "--ash": "#999999", "--term-fg": "#f0f0f0" }, rain: { fade: "4,4,4", glow: "#888888", deep: "#333333", body: "#bdbdbd", bodyHot: "#eeeeee", head: "#ffffff", headHot: "#ffffff", ember: ["#ffffff", "#bdbdbd", "#555555"] } },
+  };
+  const RWORDS = ["come", "and", "get", "us"];
 
   function resolve(arg) {
     let segs;
@@ -147,6 +182,15 @@ export function initTerminal({ term, input, form, decode, flare }) {
       "                ||----w |",
       "                ||     ||",
     ],
+    door: [
+      "   ____________",
+      "  | .--------. |",
+      "  | |        | |",
+      "  | |   ()   | |",
+      "  | |        | |",
+      "  | '--------' |",
+      "  '------------'",
+    ],
   };
 
   // ---- one-liners --------------------------------------------------------
@@ -184,7 +228,8 @@ export function initTerminal({ term, input, form, decode, flare }) {
       "commands: help  whoami  sudo  ls [-a]  cd <dir>  cat <file>  pwd  find <x>  tree",
       "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
       "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
-      "          man <x>  echo <x>  clear  exit    ...and many more you'll have to find.",
+      "          man <x>  echo <x>  theme <name>  ritual  galaga  games  clear  exit",
+      "          ...and many more you'll have to find.",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
     "?": () => CMD.help(),
@@ -230,7 +275,7 @@ export function initTerminal({ term, input, form, decode, flare }) {
       if (!node) return `cd: ${io.rest}: No such file or directory`;
       if (node.t !== "d") return `cd: ${io.rest}: Not a directory`;
       state.cwd = segs;
-      return "";
+      return MOTD[fmtPath(segs)] || "";
     },
     cat: (io) => {
       if (!io.rest) return "cat: missing operand";
@@ -472,16 +517,91 @@ export function initTerminal({ term, input, form, decode, flare }) {
     return Array.isArray(out) ? out.join("\n") : out;
   }
 
+  // --- themes (recolour terminal + rain) ---
+  function applyTheme(name) {
+    const th = THEMES[name];
+    if (!th) return `no such theme '${name}'. try: theme list`;
+    for (const [k, v] of Object.entries(th.vars)) document.documentElement.style.setProperty(k, v);
+    if (setPalette && th.rain) setPalette(th.rain);
+    if (flare) flare(700);
+    surge(450);
+    return `palette set: ${name}.`;
+  }
+  CMD.theme = (io) => {
+    const name = (io.tokens[0] || "").toLowerCase();
+    if (!name || name === "list") return "themes: " + Object.keys(THEMES).join("  ") + "\nusage: theme <name>";
+    return applyTheme(name);
+  };
+  CMD.themes = () => CMD.theme({ tokens: ["list"] });
+
+  // --- multi-step unlock ritual (flares harder each step) ---
+  function startRitual() {
+    state.ritual = { idx: 0 };
+    if (flare) flare(500);
+    surge(600);
+    return [
+      "a ritual. speak the name of this place — one word at a time, in order.",
+      "(type 'q' to stop. a wrong word resets the lock.)",
+      "speak the first word:",
+    ].join("\n");
+  }
+  function handleRitual(raw) {
+    const word = raw.toLowerCase();
+    if (["q", "quit", "abort", "stop", "exit"].includes(word)) {
+      state.ritual = null;
+      println("the ritual collapses. the rain doesn't care.");
+      return;
+    }
+    const r = state.ritual;
+    if (word === RWORDS[r.idx]) {
+      r.idx++;
+      if (flare) flare(400 + r.idx * 500);
+      surge(250 + r.idx * 200);
+      if (r.idx >= RWORDS.length) {
+        state.ritual = null;
+        if (flare) flare(2600);
+        surge(1300);
+        println(["", "...the four tumblers fall.", ART.door.join("\n"),
+          "behind it: more rain. of course. there was never anything here but us.",
+          "(you came. you got us. now go check your mail.)"].join("\n"));
+      } else {
+        println(`...'${word}'.  [tumbler ${r.idx} of 4 turns]   speak the next word:`);
+      }
+    } else {
+      state.ritual = null;
+      println("the word curdles. the lock resets. begin again with 'ritual'.");
+    }
+  }
+  CMD.ritual = () => startRitual();
+  CMD.unlock = () => startRitual();
+  CMD.seance = () => startRitual();
+
+  // --- arcade ---
+  function startArcade() {
+    if (state.gaming) return "";
+    state.gaming = true;
+    surge(700);
+    startGame({ term, input, flare, surge, onExit: (msg) => { state.gaming = false; println(msg); } });
+    return "";
+  }
+  CMD.galaga = () => startArcade();
+  CMD.invaders = () => startArcade();
+  CMD.arcade = () => startArcade();
+  CMD.game = () => startArcade();
+  CMD.games = () => "arcade: galaga   (also try: theme <name>, ritual, fortune)";
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const raw = input.value;
     input.value = "";
+    if (state.gaming) return; // the game owns the keyboard
     println("PS C:\\> " + raw);
+    if (state.ritual) { handleRitual(raw.trim()); return; }
     const res = run(raw);
     if (res) println(res);
   });
 
-  term.addEventListener("click", () => input.focus());
+  term.addEventListener("click", () => { if (!state.gaming) input.focus(); });
 
   return { println };
 }

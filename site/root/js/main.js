@@ -42,6 +42,7 @@ const { println } = initTerminal({
   form: document.getElementById("cmdline"),
   decode: decodeToText,
   flare: rain.flare,
+  setPalette: rain.setPalette,
 });
 
 // A breadcrumb for the Application tab (a Graph scope, base64).

@@ -5,3 +5,6 @@ playwright-report/
 playwright/.cache/
 .DS_Store
 npm-debug.log*
+# scratch: local screenshot/preview helpers (never committed)
+_shot*.mjs
+cg-*.png

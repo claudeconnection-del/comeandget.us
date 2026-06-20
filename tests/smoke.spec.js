@@ -166,4 +166,31 @@ test.describe("comeandget.us", () => {
     expect(txt).not.toContain("conditional");
     expect(txt).not.toContain("indrid");
   });
+
+  test("theme command recolours the terminal palette", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "theme matrix");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("palette set: matrix");
+    const ember = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--ember").trim());
+    expect(ember.toLowerCase()).toBe("#00ff66");
+  });
+
+  test("the unlock ritual completes through its four steps", async ({ page }) => {
+    await page.goto("/root/");
+    const type = async (c) => { await page.fill("#cmd", c); await page.press("#cmd", "Enter"); };
+    await type("ritual");
+    for (const w of ["come", "and", "get", "us"]) await type(w);
+    await expect(page.locator("#term")).toContainText("you came. you got us");
+  });
+
+  test("the arcade starts and quits cleanly", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "galaga");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("SCORE");
+    await page.keyboard.press("q");
+    await expect(page.locator("#term")).toContainText("score");
+    await expect(page.locator("#cmd")).toBeEnabled();
+  });
 });
