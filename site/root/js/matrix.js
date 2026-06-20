@@ -43,7 +43,9 @@ export function createRain(canvas) {
 
   function frame() {
     const hot = performance.now() < flareUntil;
-    ctx.fillStyle = "rgba(6,4,2,0.11)";
+    // lower alpha = longer-lived trails = more motion blur (kept rich at the
+    // slower fall speed below)
+    ctx.fillStyle = "rgba(6,4,2,0.085)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     for (let i = 0; i < cols; i++) {
@@ -63,7 +65,7 @@ export function createRain(canvas) {
       ctx.shadowBlur = 0;
 
       if (y > canvas.height && Math.random() > 0.975) drops[i] = Math.random() * -20;
-      drops[i] += hot ? 0.95 : 0.5 + Math.random() * 0.25;
+      drops[i] += hot ? 0.6 : 0.28 + Math.random() * 0.16;
     }
     requestAnimationFrame(frame);
   }
