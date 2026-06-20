@@ -130,13 +130,13 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#rain")).toBeVisible();
     await expect(page.locator("#out")).toContainText("checked in", { timeout: 5000 });
 
-    // the JWT in the agent payload must decode (alg:none) to the krbtgt riddle
+    // the JWT (alg:none) must decode and point the solver onward to the DNS step
     const res = await page.request.get("/root/check-in.json");
     expect(res.ok()).toBeTruthy();
     const token = (await res.json())._token;
     const seg = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     const payload = JSON.parse(Buffer.from(seg, "base64").toString("utf8"));
-    expect(payload.riddle.toLowerCase()).toContain("krbtgt");
+    expect(payload.next.toLowerCase()).toContain("_rabbit");
 
     expect(errors, `unexpected errors: ${errors.join(" | ")}`).toEqual([]);
   });

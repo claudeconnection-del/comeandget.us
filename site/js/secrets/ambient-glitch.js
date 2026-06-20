@@ -1,6 +1,6 @@
-// The signal is never quite stable. At irregular intervals the page stutters —
-// usually a single subtle artifact, occasionally a short flurry to ramp tension,
-// then it settles again. Fully silent under prefers-reduced-motion.
+// The signal is never quite stable. At long, irregular intervals the text
+// throws a single sharp chroma colour-jump, then settles. Nothing else.
+// Fully silent under prefers-reduced-motion.
 
 export default {
   id: "ambient-glitch",
@@ -21,18 +21,8 @@ export default {
 
     function tick() {
       if (paused) return;
-      if (Math.random() < 0.14) {
-        // rare flurry: a handful of quick stutters in close succession
-        const n = 2 + Math.floor(Math.random() * 3);
-        let i = 0;
-        const flurry = setInterval(() => {
-          stage.glitch(Math.random() < 0.4 ? "strong" : "mild");
-          if (++i >= n) clearInterval(flurry);
-        }, 110);
-      } else {
-        stage.glitch("mild");
-      }
-      schedule(wait(3500, 7000)); // next stutter in 3.5–10.5s
+      stage.glitch(); // one sharp chroma colour-jump
+      schedule(wait(8000, 10000)); // infrequent: next jump in ~8–18s
     }
 
     document.addEventListener("visibilitychange", () => {

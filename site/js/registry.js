@@ -14,8 +14,6 @@ export function createStage() {
     subtle: $("#subtle"),
     sigil: $("#sigil"),
     reveal: $("#reveal"),
-    scanlines: $("#scanlines"),
-    scanbar: $("#scanbar"),
     stage: $("main"),
     count: $("#count"),
   };
@@ -27,6 +25,7 @@ export function createStage() {
   };
 
   let restore = null;
+  let chromaTimer = null;
   const wakeCbs = [];
 
   const stage = {
@@ -65,9 +64,8 @@ export function createStage() {
       }
     },
 
-    // End the feign: lift dormancy and release every waiting secret. The "tell"
-    // is a smooth power-on — chroma shimmer + a sweep + scanlines — with no
-    // positional tearing (no gl-tear), so nothing jumps between two spots.
+    // End the feign: lift dormancy, release every waiting secret, and give the
+    // single "tell" — one chroma colour-jump on the text.
     wake() {
       if (state.awake) return;
       state.awake = true;
@@ -75,60 +73,23 @@ export function createStage() {
       for (const fn of wakeCbs.splice(0)) {
         try { fn(); } catch (e) { console.error("[wake]", e); }
       }
-      if (reduceMotion()) return;
-      const target = el.stage;
-      if (target) {
-        target.classList.add("gl-chroma");
-        setTimeout(() => target.classList.remove("gl-chroma"), 650);
-      }
-      if (el.scanbar) {
-        el.scanbar.classList.remove("sweep");
-        void el.scanbar.offsetWidth;
-        el.scanbar.classList.add("sweep");
-      }
-      if (el.scanlines) {
-        el.scanlines.classList.add("on");
-        setTimeout(() => el.scanlines.classList.remove("on"), 1100);
-      }
+      this.glitch();
     },
 
-    // One intermittent glitch. "mild" = a quick, subtle artifact (the ambient
-    // texture); "strong" = a layered burst (signal tearing, scanlines, a sweep).
-    // Each artifact is brief and self-clearing so the page stays readable, and
-    // the whole thing is suppressed under prefers-reduced-motion.
-    glitch(level = "mild") {
+    // The only glitch: a sharp chroma colour-jump on the text. No positional
+    // motion, no scanlines, no tearing. Suppressed under prefers-reduced-motion.
+    glitch() {
       const target = el.stage;
       if (!target || reduceMotion()) return;
-
-      // Composite animations layer cleanly: at most one transform/clip animation
-      // on <main> (gl-mild or gl-tear) plus chroma-split on the text children.
-      const strong = level === "strong";
-      const fx = ["gl-chroma"];
-      if (strong) fx.push("gl-tear");
-      else if (Math.random() < 0.72) fx.push("gl-mild");
-      target.classList.add(...fx);
-
-      if (el.scanbar && (strong || Math.random() < 0.35)) {
-        el.scanbar.classList.remove("sweep");
-        void el.scanbar.offsetWidth;
-        el.scanbar.classList.add("sweep");
-      }
-      if (el.scanlines && strong) el.scanlines.classList.add("on");
-
-      const dur = strong ? 480 : 130 + Math.random() * 170;
-      setTimeout(() => {
-        target.classList.remove(...fx);
-        if (el.scanlines) el.scanlines.classList.remove("on");
-      }, dur);
+      target.classList.remove("gl-chroma");
+      void target.offsetWidth; // restart the keyframes
+      target.classList.add("gl-chroma");
+      clearTimeout(chromaTimer);
+      chromaTimer = setTimeout(() => target.classList.remove("gl-chroma"), 520);
     },
 
-    // Back-compat: a stronger burst, with scanlines held for `ms` to ramp tension.
-    glitchBurst(ms = 700) {
-      this.glitch("strong");
-      if (el.scanlines && !reduceMotion()) {
-        el.scanlines.classList.add("on");
-        setTimeout(() => el.scanlines.classList.remove("on"), ms);
-      }
+    glitchBurst() {
+      this.glitch();
     },
   };
 

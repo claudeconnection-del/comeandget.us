@@ -18,51 +18,52 @@ function b64urlDecode(s) {
   );
 }
 
-// A breadcrumb for the Application tab.
+// A breadcrumb for the Application tab (a Graph scope, base64).
 try {
-  localStorage.setItem("rmm.session", "cHJpdj1TWVNURU0gLy8geW91IGVzY2FsYXRlZC4gbm93IGZpbmlzaCB0aGUgam9iLg==");
+  localStorage.setItem("entra.session", "c2NvcGU9RGlyZWN0b3J5LlJlYWRXcml0ZS5BbGwgLy8gZ2xvYmFsIGFkbWluLiBub3cgZmluaXNoLg==");
 } catch {}
 
-// Console boot — the agent talks here.
-console.log("%croot@comeandget — local_admin (SYSTEM / uid=0)", EMBER + ";font-size:15px");
-console.log("%cthe agent never stopped checking in. Network tab -> check-in.json", EMBER);
-console.log("%cb64: YWxnOm5vbmUgaXMgbm90IGEgYnVnLiBpdCBpcyBhbiBpbnZpdGF0aW9uLiBkZWNvZGUgd2hhdCB0aGUgYWdlbnQgc2VuZHMu", ASH);
+// Console boot — the device session talks here.
+console.log("%cEntra / Intune session — neo@comeandget.onmicrosoft.com (Global Administrator)", EMBER + ";font-size:15px");
+console.log("%cthe device still checks in. Network tab -> check-in.json", EMBER);
+console.log("%cb64: dGhpcyBpcyBhbiBlbnRyYSBhY2Nlc3MgdG9rZW4uIGFsZyBub25lIG1lYW5zIG5vYm9keSB2ZXJpZmllZCBpdC4gcmVhZCB0aGUgY2xhaW1zLg==", ASH);
 console.log("%c// atob() it, or call decode(). then: help()  whoami()  sudo()", ASH);
 
-// The hunt's reactive call: the agent phones home on load.
+// The hunt's reactive call: the device phones Intune home on load.
 fetch("check-in.json")
   .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
   .then((j) => {
     rain.flare(1100);
     out.innerHTML =
-      `<span class="hit">// ${j.agent_id} @ ${j.hostname} checked in</span>  ./check-in.json [200]`;
+      `<span class="hit">// ${j.deviceName} (${j.complianceState}) checked in to Intune</span>  ./check-in.json [200]`;
     console.log(
-      "%cagent reported in. the _token in check-in.json is a JWT (alg:none). decode its payload.",
+      "%cdevice reported in. _token is an Entra access token (alg:none). decode its payload.",
       SPARK
     );
   })
   .catch((err) => {
-    out.textContent = `// agent unreachable [${err}]`;
+    out.textContent = `// device unreachable [${err}]`;
   });
 
 // Console toys — interacting with the clues stokes the fire.
 window.help = function () {
   rain.flare(700);
   console.log("%cthe rabbit hole:", SPARK + ";font-size:14px");
-  console.log("%c 1. read what the agent sends home  -> ./check-in.json", EMBER);
-  console.log("%c 2. the _token is a JWT. decode the payload (the middle part)", EMBER);
-  console.log("%c 3. mind the alg. it is 'none'. nobody is checking.", EMBER);
-  console.log("%c 4. answer the riddle in the subject line. you know the address.", EMBER);
+  console.log("%c 1. read what the device sends home  -> ./check-in.json", EMBER);
+  console.log("%c 2. _token is an Entra access token (JWT). decode the payload (middle part)", EMBER);
+  console.log("%c 3. mind the alg. it is 'none'. nobody is verifying.", EMBER);
+  console.log("%c 4. the payload points to DNS: dig TXT _rabbit.comeandget.us", EMBER);
+  console.log("%c 5. decode the record, answer the riddle in the subject line. you know the address.", EMBER);
   console.log("%ctool: decode('<base64 or jwt>')", ASH);
 };
 
 window.whoami = function () {
-  console.log("%clocal_admin  (SYSTEM / uid=0)", EMBER);
+  console.log("%cneo@comeandget.onmicrosoft.com  (Global Administrator)", EMBER);
 };
 
 window.sudo = function () {
   rain.flare(900);
-  console.log("%cyou are already root. that was never the hard part.", SPARK);
+  console.log("%cyou are already Global Admin. that was never the hard part.", SPARK);
 };
 
 window.decode = function (s) {
@@ -87,12 +88,11 @@ window.decode = function (s) {
   }
 };
 
-// minor on-page reactivity
+// a single nudge on first click — no rain speed-up, so the default pacing holds
 let nudged = false;
 document.querySelector("main").addEventListener("click", () => {
-  rain.flare(450);
   if (!nudged) {
     nudged = true;
-    console.log("%cthe answers are not on the page. they are in what it does. open the console.", SPARK);
+    console.log("%cthe answers are not on the page. they are in what it sends. open the console.", SPARK);
   }
 });

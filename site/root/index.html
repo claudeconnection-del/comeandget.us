@@ -9,10 +9,10 @@
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <!--
-    you followed the rabbit. good. there is no spoon, but there is a shell.
-    breadcrumb (hex): 746865206167656e74207374696c6c207265706f72747320686f6d653a202e2f636865636b2d696e2e6a736f6e
-    the agent never stopped phoning home. watch the wire. read what it sends.
-    P.S. the token's alg is "none". that is not a bug.
+    you followed the rabbit. good. there is no spoon, but there is a tenant.
+    breadcrumb (hex): 74686520646576696365207374696c6c20636865636b7320696e20746f20696e74756e653a202e2f636865636b2d696e2e6a736f6e
+    the device never stopped checking in. watch the wire. read what it sends.
+    P.S. the access token's alg is "none". that is not a bug.
   -->
 </head>
 <body>
@@ -20,11 +20,11 @@
 
   <main>
     <h1 class="sr-only">A terminal interface; the puzzle continues in the browser developer tools.</h1>
-    <pre class="term" id="term">root@comeandget:~# whoami
-local_admin  (SYSTEM / uid=0)
-root@comeandget:~# tail -f /var/log/rmm/agent.log
-<span class="muted"># agent is still checking in. console is open. dig.</span>
-root@comeandget:~# <span class="cursor" aria-hidden="true">&#9608;</span></pre>
+    <pre class="term" id="term">PS C:\&gt; Connect-MgGraph -Scopes Directory.ReadWrite.All
+Welcome to Microsoft Graph. Account: neo@comeandget.onmicrosoft.com
+PS C:\&gt; Get-MgContext | Select Account, @{n='Role';e={'Global Administrator'}}
+<span class="muted"># the device still checks in to Intune. console is open. dig.</span>
+PS C:\&gt; <span class="cursor" aria-hidden="true">&#9608;</span></pre>
     <div class="out" id="out" role="status" aria-live="polite"></div>
   </main>
 
