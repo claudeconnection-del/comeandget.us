@@ -34,8 +34,9 @@ export default {
       stage.glitchBurst(1400);
       stage.say("it opens.", { revert: false });
       stage.reveal(
-        `<span class="name">the seal reads: <b>${plain}</b></span>` +
-          `<a href="mailto:${addr}" id="door">▷ ${addr}</a>`
+        `<span class="name">the seal breaks: <b>${plain}</b></span>` +
+          `<a href="mailto:${addr}" id="door">▷ ${addr}</a>` +
+          `<span class="found">his name. in the subject line. nowhere else will do.</span>`
       );
     }
 

@@ -30,6 +30,10 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Smoke test the puzzle
         run: npm test
+        env:
+          # Optional: set a repo secret named PUZZLE_ANSWER to enforce the
+          # "answer never ships" guard in CI. If unset, that one check skips.
+          PUZZLE_ANSWER: ${{ secrets.PUZZLE_ANSWER }}
 
   deploy:
     name: deploy to github pages

@@ -1,66 +1,85 @@
 # comeandget.us
 
-A single-page static cryptographic ARG. Glitched-hack aesthetic, cryptid /
-mythological clue system, zero runtime dependencies. The page hides a layered
-puzzle whose solution is an email address; the source is deliberately readable,
-but reading it is a *tool*, not the answer.
+> you found the repository. of course you did. that's what they all do —
+> pull the boards off the windows and call it trespassing when we look back.
+>
+> welcome. read everything. it won't help as much as you think.
 
-> No spoilers live in this repo. The plaintext, the key, and the payoff address
-> never appear in the source — only a ciphertext and the SHA-256 fingerprint of
-> the key. The page decrypts live when a solver supplies the right key.
+This is the door. One page, no server, nothing that loads from anywhere you
+can't see. Everything the page needs, the page carries — which means you can
+read all of it, and you still won't be let in. The walls are honest. The lock
+is not in the walls.
 
-## Structure
+Seven lesser things keep the gate. Their names, in order, spell an eighth.
+Speak the eighth and the seal breaks. What the seal says after that is between
+you and the thing that answers. It answers to a name. Bring the right one.
 
 ```
-site/                 # everything that ships to production
+38.8451° N   82.1371° W
+XII · MCMLXVII
+```
+
+---
+
+## for the living (maintainers)
+
+A static cryptographic ARG — glitched-hack aesthetic, a cryptid / paranormal
+clue system, zero runtime dependencies. The source is *meant* to be read; that's
+the genre. What is **not** in the source is anything that proves you solved it:
+the plaintext, the key in cleartext, the payoff address, and the final answer
+all stay out. Only a ciphertext and a one-way hash of the key ever ship. The
+page decrypts live, in the browser, when someone supplies the right name.
+
+```
+site/                 # everything that crosses the threshold (deployed)
   index.html
   styles.css
   js/
-    main.js           # boots the secret registry
-    crypto.js         # vigenere + sha256 helpers (algorithm only)
-    registry.js       # shared "stage" passed to every secret
-    secrets/*.js      # one isolated module per hidden mechanic
-  CNAME               # custom domain pin
-tests/smoke.spec.js   # Playwright end-to-end checks (not shipped)
-.github/workflows/    # CI/CD
+    main.js           # wakes the registry of secrets
+    crypto.js         # vigenere + sha256, algorithm only — no answers
+    registry.js       # the shared stage handed to every secret
+    secrets/*.js      # one isolated mechanic each
+  CNAME               # the true name of this place
+tests/smoke.spec.js   # proves the door works and leaks nothing (never deployed)
+secret/               # gitignored; the answer lives here, never in the repo
+.github/workflows/    # what raises the dead on every push
 ```
 
-Only `site/` is deployed — tests and tooling stay out of the public artifact.
-
-## Develop
+### wake it locally
 
 ```bash
 npm install
-npm run dev        # serves site/ at http://localhost:4173
+npm run dev          # serves site/ at http://localhost:4173
 ```
 
-## CI/CD
+### what happens on every push
 
-`.github/workflows/deploy.yml` runs on every push and PR:
+`.github/workflows/deploy.yml`:
 
-1. **ci** — `npm run validate` (HTML validation) + `npm test` (Playwright smoke
-   test that the page loads, a hidden being reveals, and the true key unseals
-   the sigil and constructs the mailbox).
-2. **deploy** — only on push to `main`, after `ci` is green: uploads `site/` and
-   publishes to GitHub Pages via the built-in `GITHUB_TOKEN`. No secrets stored.
+1. **ci** — `npm run validate` (HTML) + `npm test` (Playwright): the page loads,
+   a hidden being answers, the true key unseals the sigil and constructs the
+   mailbox, and — if a `PUZZLE_ANSWER` secret is configured — nothing shipped
+   contains the final answer.
+2. **deploy** — only on `main`, only if `ci` is green: publishes `site/` to
+   GitHub Pages with the built-in `GITHUB_TOKEN`. No secrets are stored to ship.
 
 ```bash
-npm run ci         # run the full gate locally
+npm run ci           # run the whole gate yourself
 ```
 
-## Custom domain
+### the answer, kept outside
 
-`site/CNAME` pins `comeandget.us`. Point DNS at GitHub Pages:
+The leak guard never names the answer. It reads it from `PUZZLE_ANSWER` (a CI
+secret) or a gitignored `secret/answer.txt`, then proves it appears nowhere in
+the deployed files. Set one of those to arm the guard; leave both unset and that
+single check politely skips.
 
-| Type  | Host | Value |
-|-------|------|-------|
-| A     | @    | 185.199.108.153 |
-| A     | @    | 185.199.109.153 |
-| A     | @    | 185.199.110.153 |
-| A     | @    | 185.199.111.153 |
-| AAAA  | @    | 2606:50c0:8000::153 |
-| AAAA  | @    | 2606:50c0:8001::153 |
-| AAAA  | @    | 2606:50c0:8002::153 |
-| AAAA  | @    | 2606:50c0:8003::153 |
+### the true name (custom domain)
 
-Then enable **Enforce HTTPS** in the repo's Pages settings once the cert issues.
+`site/CNAME` pins `comeandget.us`. DNS points the apex at GitHub Pages
+(A `185.199.108–111.153`, AAAA `2606:50c0:8000–8003::153`) and `www` at
+`claudeconnection-del.github.io`. Enforce HTTPS once the certificate is issued.
+
+---
+
+*come and get us.*

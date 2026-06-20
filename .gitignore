@@ -1,4 +1,5 @@
 node_modules/
+secret/
 test-results/
 playwright-report/
 playwright/.cache/
