@@ -3,12 +3,13 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-// The final puzzle answer must never live in this repo. The leak guard loads it
-// from an out-of-repo source so the word itself is never committed:
-//   - process.env.PUZZLE_ANSWER  (set a GitHub Actions secret to enforce in CI)
-//   - secret/answer.txt          (gitignored local file)
-// If neither exists the guard skips rather than weakening into a no-op.
-function loadAnswerNeedle() {
+// No puzzle answer (either ARG) may live in this repo. The leak guard loads the
+// answers from an out-of-repo source so the words are never committed:
+//   - process.env.PUZZLE_ANSWER  (CI secret; newline- or comma-separated)
+//   - secret/answer.txt          (gitignored local file, one answer per line)
+// Each answer contributes its first word as a forbidden needle. If none are
+// available the guard skips rather than weakening into a no-op.
+function loadAnswerNeedles() {
   let raw = process.env.PUZZLE_ANSWER;
   if (!raw) {
     try {
@@ -18,11 +19,13 @@ function loadAnswerNeedle() {
       raw = "";
     }
   }
-  raw = (raw || "").trim();
-  return raw ? raw.split(/\s+/)[0].toLowerCase() : null;
+  return (raw || "")
+    .split(/[\n,]/)
+    .map((line) => line.trim().split(/\s+/)[0].toLowerCase())
+    .filter(Boolean);
 }
 
-const NEEDLE = loadAnswerNeedle();
+const NEEDLES = loadAnswerNeedles();
 
 const SHIPPED = [
   "/index.html",
@@ -37,6 +40,11 @@ const SHIPPED = [
   "/js/secrets/ambient-glitch.js",
   "/js/secrets/memory.js",
   "/js/secrets/konami.js",
+  "/root/index.html",
+  "/root/styles.css",
+  "/root/js/main.js",
+  "/root/js/matrix.js",
+  "/root/check-in.json",
 ];
 
 test.describe("comeandget.us", () => {
@@ -86,18 +94,50 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#sigil")).toHaveClass(/opened/);
   });
 
-  test("the final answer never appears in any shipped file or the DOM", async ({ page }) => {
-    test.skip(!NEEDLE, "set PUZZLE_ANSWER or secret/answer.txt to enable the leak guard");
+  test("no puzzle answer appears in any shipped file or the DOM", async ({ page }) => {
+    test.skip(!NEEDLES.length, "set PUZZLE_ANSWER or secret/answer.txt to enable the leak guard");
 
     await page.goto("/?wake=0");
-    await page.keyboard.type("MOTHMAN"); // fully solved state — still must not contain the answer
+    await page.keyboard.type("MOTHMAN"); // fully solved state — still must not contain any answer
     await expect(page.locator("#door")).toBeVisible();
-    expect((await page.content()).toLowerCase(), "DOM leaks the answer").not.toContain(NEEDLE);
+    const dom = (await page.content()).toLowerCase();
+    for (const n of NEEDLES) expect(dom, `DOM leaks "${n}"`).not.toContain(n);
 
     for (const f of SHIPPED) {
       const res = await page.request.get(f);
       expect(res.ok(), `${f} should be served`).toBeTruthy();
-      expect((await res.text()).toLowerCase(), `${f} leaks the answer`).not.toContain(NEEDLE);
+      const text = (await res.text()).toLowerCase();
+      for (const n of NEEDLES) expect(text, `${f} leaks "${n}"`).not.toContain(n);
     }
+  });
+
+  // --- ARG 2: the tech rabbit hole ---
+
+  test("the white rabbit leads to /root", async ({ page }) => {
+    await page.goto("/?wake=0");
+    const rabbit = page.locator("#rabbit");
+    await expect(rabbit).toHaveAttribute("href", "root/");
+    await expect(rabbit).toBeVisible();
+  });
+
+  test("the rabbit hole boots and the agent checks in with a decodable token", async ({ page }) => {
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+
+    await page.goto("/root/");
+    await expect(page).toHaveTitle(/root@comeandget/);
+    await expect(page.locator("#rain")).toBeVisible();
+    await expect(page.locator("#out")).toContainText("checked in", { timeout: 5000 });
+
+    // the JWT in the agent payload must decode (alg:none) to the krbtgt riddle
+    const res = await page.request.get("/root/check-in.json");
+    expect(res.ok()).toBeTruthy();
+    const token = (await res.json())._token;
+    const seg = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(Buffer.from(seg, "base64").toString("utf8"));
+    expect(payload.riddle.toLowerCase()).toContain("krbtgt");
+
+    expect(errors, `unexpected errors: ${errors.join(" | ")}`).toEqual([]);
   });
 });

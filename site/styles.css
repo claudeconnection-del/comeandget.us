@@ -189,6 +189,32 @@ main {
   text-align: center;
 }
 
+/* the white rabbit: nearly invisible, found on hover (desktop) or by the
+   patient on touch (faint pulse + always tappable). leads down the hole. */
+.rabbit {
+  position: fixed;
+  bottom: 1.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 30px;
+  z-index: 4;
+  color: #dcdcdc;
+  opacity: 0.05;
+  transition: opacity 0.55s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.rabbit svg { display: block; width: 100%; height: 100%; }
+.rabbit:hover,
+.rabbit:focus-visible { opacity: 0.92; outline: none; }
+@media (hover: none) {
+  .rabbit { opacity: 0.16; animation: hop 3.4s ease-in-out infinite; }
+}
+@keyframes hop {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.32; }
+}
+
 /* --- keyframes --- */
 @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
@@ -276,7 +302,8 @@ body.dormant .cursor { animation: none; opacity: 0; }
 body.dormant .subtle,
 body.dormant .sigil,
 body.dormant .reveal,
-body.dormant .corner { opacity: 0; }
+body.dormant .corner,
+body.dormant .rabbit { opacity: 0; }
 
 /* Accessibility: no glitch motion, no scan overlays, when reduced motion is set. */
 @media (prefers-reduced-motion: reduce) {
@@ -284,6 +311,6 @@ body.dormant .corner { opacity: 0; }
   .line.glitch, .sigil.opened,
   main.gl-chroma .line, main.gl-chroma .subtle, main.gl-chroma .sigil,
   main.gl-chroma .reveal, main.gl-chroma .ghost,
-  main.gl-mild, main.gl-tear, .scanbar.sweep { animation: none !important; }
+  main.gl-mild, main.gl-tear, .scanbar.sweep, .rabbit { animation: none !important; }
   .scanlines, .scanbar { display: none !important; }
 }

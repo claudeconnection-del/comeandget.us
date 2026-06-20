@@ -1,0 +1,105 @@
+:root {
+  --bg: #060402;
+  --ember: #ff7a18;
+  --ember-dim: #7a3a0c;
+  --ash: #c9a98a;
+  --spark: #ffd27a;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--ash);
+  font-family: var(--mono);
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  cursor: crosshair;
+}
+
+#rain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+}
+
+/* vignette + heat haze so text stays legible over the rain */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(6,4,2,0.55) 30%, rgba(6,4,2,0.86) 100%);
+}
+
+main {
+  position: relative;
+  z-index: 2;
+  width: min(92vw, 760px);
+  padding: 1.5rem;
+}
+
+.term {
+  font-size: clamp(0.8rem, 2.2vw, 1.05rem);
+  line-height: 1.7;
+  color: var(--ember);
+  text-shadow: 0 0 10px rgba(255, 122, 24, 0.35);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.term .muted { color: var(--ember-dim); }
+
+.cursor {
+  display: inline-block;
+  color: var(--spark);
+  animation: blink 1.1s steps(1) infinite;
+}
+
+.out {
+  margin-top: 1.4rem;
+  min-height: 1.6em;
+  font-size: clamp(0.78rem, 2vw, 0.98rem);
+  line-height: 1.7;
+  color: var(--spark);
+  text-shadow: 0 0 8px rgba(255, 210, 122, 0.3);
+  white-space: pre-wrap;
+}
+.out .hit { color: var(--ember); }
+.out a {
+  color: var(--spark);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--ember-dim);
+}
+
+.noscript {
+  position: relative;
+  z-index: 2;
+  color: var(--ember);
+  text-align: center;
+  padding: 2rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor { animation: none; }
+}

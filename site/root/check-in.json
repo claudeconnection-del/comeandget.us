@@ -1,0 +1,19 @@
+{
+  "schema": "rmm.checkin/v3",
+  "agent_id": "EP-7F3A-WIN11",
+  "hostname": "NEO-WS01",
+  "site": "wonderland",
+  "os": "Windows 11 Pro 23H2 (22631.4317)",
+  "last_checkin": "1970-01-01T00:00:00Z",
+  "uptime_s": 8675309,
+  "patch_ring": "tier3",
+  "pending_reboot": true,
+  "secure_boot": true,
+  "tpm": "2.0",
+  "bitlocker": "suspended",
+  "defender": { "rtp": false, "signatures": "stale" },
+  "open_ports": [22, 445, 3389, 5985],
+  "notes": "do not remediate. observe.",
+  "motd": "ZGVjb2RlIHRoZSBfdG9rZW4uIG1pbmQgdGhlIGFsZy4gdGhlbiBhbnN3ZXIgdGhlIHJpZGRsZS4=",
+  "_token": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJybW0tY29yZSIsInN1YiI6ImxvY2FsX2FkbWluIiwicHJpdiI6IlNZU1RFTSIsIm5vdGUiOiJhbGc6bm9uZSDigJQgd2UgZGlkIG5vdCBzaWduIHRoaXMsIGFuZCB3ZSBkaWQgbm90IGNoZWNrIHlvdXJzIGVpdGhlciIsInJpZGRsZSI6ImZvcmdlZCBmcm9tIHRoZSBrcmJ0Z3QgaGFzaCwgaXQgbWludHMgYW55IGlkZW50aXR5IGluIHRoZSByZWFsbSBhbmQgbmV2ZXIgZXhwaXJlcy4gbmFtZSBpdCAodHdvIHdvcmRzKS4iLCJzdWJtaXQiOiJhbnN3ZXIgaW4gdGhlIHN1YmplY3QgbGluZSB0byBwbGVhc2VAY29tZWFuZGdldC51cyJ9."
+}
