@@ -19,7 +19,13 @@ export function startDoom({ term, input, flare, surge, onExit }) {
     "##################",
   ];
   const VW = 56, VH = 18, FOV = Math.PI / 3;
-  const SHADE = ["█", "▓", "▒", "░"];
+  // no full block — keeps near walls from blowing out to a wall of white
+  const SHADE = ["▓", "▒", "░", "·"];
+  const shadeFor = (dist, side) => {
+    let i = dist < 2 ? 0 : dist < 4 ? 1 : dist < 7 ? 2 : 3;
+    if (side) i = Math.min(3, i + 1); // side faces one step lighter = visible corners
+    return SHADE[i];
+  };
 
   const tileAt = (x, y) => {
     const r = MAP[Math.floor(y)];
@@ -39,19 +45,22 @@ export function startDoom({ term, input, flare, surge, onExit }) {
     }
   }
   const totalE = enemies.length;
-  let health = 100, kills = 0, over = false, won = false;
+  let health = 100, kills = 0, over = false, won = false, flashUntil = 0;
   const keys = Object.create(null);
 
   const savedHTML = term.innerHTML;
   const savedMax = term.style.maxHeight;
   const savedOverflow = term.style.overflow;
+  const savedColor = term.style.color;
   term.classList.add("gaming");
+  term.style.color = "#a7b388"; // dim phosphor so the level isn't blinding
   if (input) { input.blur(); input.disabled = true; }
 
   const norm = (a) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 
   function fire() {
     flare && flare(140);
+    flashUntil = performance.now() + 130;
     let best = null, bestD = 9;
     for (const e of enemies) {
       if (!e.alive) continue;
@@ -111,22 +120,26 @@ export function startDoom({ term, input, flare, surge, onExit }) {
     for (let col = 0; col < VW; col++) {
       const ra = pa - FOV / 2 + (col / VW) * FOV;
       const cos = Math.cos(ra), sin = Math.sin(ra);
-      let dist = 0, hit = "#";
-      for (let s = 0; s < 200; s++) {
-        dist += 0.06;
-        const c = tileAt(px + cos * dist, py + sin * dist);
-        if (c === "#" || c === "X") { hit = c; break; }
+      let dist = 0, hit = "#", side = false;
+      let pcx = Math.floor(px), pcy = Math.floor(py);
+      for (let s = 0; s < 300; s++) {
+        dist += 0.04;
+        const hx = px + cos * dist, hy = py + sin * dist;
+        const cx = Math.floor(hx), cy = Math.floor(hy);
+        const c = tileAt(hx, hy);
+        if (c === "#" || c === "X") { hit = c; side = cx !== pcx; break; } // entered via x-boundary = side face
+        pcx = cx; pcy = cy;
       }
       const corrected = dist * Math.cos(ra - pa);
       zbuf[col] = corrected;
       const h = Math.min(VH, Math.round(VH / (corrected + 0.0001)));
       const top = ((VH - h) / 2) | 0;
-      const sh = hit === "X" ? "$" : SHADE[Math.min(3, (corrected / 2.6) | 0)];
+      const sh = hit === "X" ? "$" : shadeFor(corrected, side);
       for (let r = 0; r < VH; r++) {
         buf[r][col] = r < top ? " " : r >= top + h ? "." : sh;
       }
     }
-    // billboard the imps
+    // billboard the imps — drawn solid so they're the brightest thing on screen
     const sprites = enemies.filter((e) => e.alive).map((e) => ({ e, d: Math.hypot(e.x - px, e.y - py) })).sort((a, b) => b.d - a.d);
     for (const { e, d } of sprites) {
       const rel = norm(Math.atan2(e.y - py, e.x - px) - pa);
@@ -134,16 +147,26 @@ export function startDoom({ term, input, flare, surge, onExit }) {
       const col = Math.round((0.5 + rel / FOV) * VW);
       const h = Math.min(VH, Math.round(VH / d));
       const top = ((VH - h) / 2) | 0;
-      const w = Math.max(1, (h / 2) | 0);
+      const w = Math.max(1, (h / 3) | 0);
       for (let cc = col - (w >> 1); cc <= col + (w >> 1); cc++) {
         if (cc < 0 || cc >= VW || d > zbuf[cc]) continue;
         for (let r = top; r < top + h && r < VH; r++) {
-          const frac = (r - top) / h;
-          buf[r][cc] = frac < 0.3 ? "@" : frac < 0.85 ? "M" : "/";
+          buf[r][cc] = (r - top) / h < 0.22 ? "@" : "█";
         }
       }
     }
-    const bar = "█".repeat(Math.max(0, Math.round(health / 10))).padEnd(10, " ");
+    // crosshair
+    const ccx = (VW / 2) | 0, ccy = (VH / 2) | 0;
+    if (buf[ccy]) buf[ccy][ccx] = "+";
+    // weapon + muzzle flash (firing feedback)
+    const gx = (VW / 2) | 0;
+    if (performance.now() < flashUntil) {
+      for (let dx = -1; dx <= 1; dx++) if (buf[VH - 3] && buf[VH - 3][gx + dx] !== undefined) buf[VH - 3][gx + dx] = "*";
+    }
+    if (buf[VH - 2]) buf[VH - 2][gx] = "█";
+    if (buf[VH - 1]) { for (let dx = -1; dx <= 1; dx++) if (buf[VH - 1][gx + dx] !== undefined) buf[VH - 1][gx + dx] = "█"; }
+
+    const bar = "│".repeat(Math.max(0, Math.round(health / 10))).padEnd(10, " ");
     const hud = ` E1M1   HP [${bar}]   KILLS ${kills}/${totalE}    [wasd/←→] move  [space] fire  [q] quit`;
     term.textContent = hud + "\n" + buf.map((r) => r.join("")).join("\n");
   }
@@ -157,6 +180,7 @@ export function startDoom({ term, input, flare, surge, onExit }) {
     term.classList.remove("gaming");
     term.style.maxHeight = savedMax;
     term.style.overflow = savedOverflow;
+    term.style.color = savedColor;
     term.innerHTML = savedHTML;
     if (input) { input.disabled = false; input.focus(); }
     if (won) { flare && flare(2400); surge && surge(1000); }
