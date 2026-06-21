@@ -78,7 +78,7 @@ export function startSnake({ term, input, flare, surge, onExit, palette }) {
     term.style.overflow = savedOverflow;
     term.innerHTML = savedHTML;
     if (input) { input.disabled = false; input.focus(); }
-    onExit && onExit(`${msg}  (score ${score})`);
+    onExit && onExit(`${msg}  (score ${score})`, score);
   }
 
   render();

@@ -268,6 +268,20 @@ test.describe("comeandget.us", () => {
     await page.keyboard.press("q");
   });
 
+  test("high scores persist and the scores board lists games", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "snake");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("SNAKE");
+    await page.keyboard.press("q");
+    await page.fill("#cmd", "scores");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("arcade");
+    await expect(page.locator("#term")).toContainText("snake");
+    const best = await page.evaluate(() => localStorage.getItem("cg.hs.snake"));
+    expect(best).not.toBeNull();
+  });
+
   for (const g of ["pong", "breakout", "tetris"]) {
     test(`${g} starts and quits cleanly`, async ({ page }) => {
       await page.goto("/root/");

@@ -105,7 +105,7 @@ export function startTetris({ term, input, flare, surge, onExit, palette }) {
     term.innerHTML = savedHTML;
     delete term._tetrisEnded;
     if (input) { input.disabled = false; input.focus(); }
-    onExit && onExit(`${msg}  (score ${score}, lines ${lines})`);
+    onExit && onExit(`${msg}  (score ${score}, lines ${lines})`, score);
   }
 
   spawn();

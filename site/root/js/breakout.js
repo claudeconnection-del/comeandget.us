@@ -82,7 +82,7 @@ export function startBreakout({ term, input, flare, surge, onExit, palette }) {
     term.innerHTML = savedHTML;
     if (input) { input.disabled = false; input.focus(); }
     if (won) { flare && flare(2000); surge && surge(800); }
-    onExit && onExit(`${msg}  (score ${score})`);
+    onExit && onExit(`${msg}  (score ${score})`, score);
   }
 
   render();

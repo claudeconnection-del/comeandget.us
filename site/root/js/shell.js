@@ -644,28 +644,43 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   CMD.seance = () => startRitual();
 
   // --- arcade ---
-  function launch(starter) {
+  const GAME_IDS = ["galaga", "doom", "snake", "pong", "breakout", "tetris"];
+  const bestOf = (id) => { try { return Number(localStorage.getItem("cg.hs." + id) || 0); } catch { return 0; } };
+  function record(id, score) {
+    if (!id || typeof score !== "number" || !isFinite(score)) return "";
+    let raw = null;
+    try { raw = localStorage.getItem("cg.hs." + id); } catch {}
+    const prev = raw === null ? -1 : Number(raw);
+    if (score > prev) {
+      try { localStorage.setItem("cg.hs." + id, String(score)); } catch {}
+      return raw === null ? "" : "  ** new best! **";
+    }
+    return `  (best ${prev})`;
+  }
+  function launch(starter, id) {
     if (state.gaming) return "";
     state.gaming = true;
     surge(700);
     const palette = gamePalette(THEMES[activeTheme] || THEMES.fire);
-    starter({ term, input, flare, surge, palette, onExit: (msg) => { state.gaming = false; println(msg); } });
+    starter({ term, input, flare, surge, palette, onExit: (msg, score) => { state.gaming = false; println(msg + record(id, score)); } });
     return "";
   }
-  CMD.galaga = () => launch(startGame);
-  CMD.invaders = () => launch(startGame);
-  CMD.arcade = () => launch(startGame);
-  CMD.game = () => launch(startGame);
-  CMD.doom = () => launch(startDoom);
-  CMD.descent = () => launch(startDoom);
-  CMD.e1m1 = () => launch(startDoom);
-  CMD.snake = () => launch(startSnake);
-  CMD.pong = () => launch(startPong);
-  CMD.breakout = () => launch(startBreakout);
-  CMD.brick = () => launch(startBreakout);
-  CMD.tetris = () => launch(startTetris);
-  CMD.blocks = () => launch(startTetris);
-  CMD.games = () => "arcade: galaga  doom  snake  pong  breakout  tetris   (also: theme <name>, ritual, fortune)";
+  CMD.galaga = () => launch(startGame, "galaga");
+  CMD.invaders = () => launch(startGame, "galaga");
+  CMD.arcade = () => CMD.games();
+  CMD.game = () => launch(startGame, "galaga");
+  CMD.doom = () => launch(startDoom, "doom");
+  CMD.descent = () => launch(startDoom, "doom");
+  CMD.e1m1 = () => launch(startDoom, "doom");
+  CMD.snake = () => launch(startSnake, "snake");
+  CMD.pong = () => launch(startPong, "pong");
+  CMD.breakout = () => launch(startBreakout, "breakout");
+  CMD.brick = () => launch(startBreakout, "breakout");
+  CMD.tetris = () => launch(startTetris, "tetris");
+  CMD.blocks = () => launch(startTetris, "tetris");
+  CMD.games = () => ["── arcade ──", ...GAME_IDS.map((g) => `  ${g.padEnd(9)} best ${bestOf(g)}`), "type a name to play.  also: theme <name>, ritual, fortune"].join("\n");
+  CMD.scores = () => CMD.games();
+  CMD.hiscores = () => CMD.games();
 
   // --- man: documents only the fun parts ---
   const MANPAGES = {
@@ -685,6 +700,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     "8ball": "8BALL(1) — ask a yes/no question. the rain answers.",
     lite: "LITE(1) — drops the rain's glow + embers for weak machines. 'lite on' / 'lite off'. sticks across reloads.",
     map: "MAP(6) — in DOOM, [m] toggles the corner minimap. P=you, e=imp, B=boss, x=gate.",
+    scores: "SCORES(1) — your local best for each game (kept in this browser). also: 'games'.",
   };
   CMD.man = (io) => {
     const t = (io.tokens[0] || "").toLowerCase();

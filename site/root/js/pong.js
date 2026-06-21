@@ -79,7 +79,7 @@ export function startPong({ term, input, flare, surge, onExit, palette }) {
     term.innerHTML = savedHTML;
     if (input) { input.disabled = false; input.focus(); }
     if (won) { flare && flare(2000); surge && surge(800); }
-    onExit && onExit(`${msg}  (${s1}:${s2})`);
+    onExit && onExit(`${msg}  (${s1}:${s2})`, s1);
   }
 
   render();

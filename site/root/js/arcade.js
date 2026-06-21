@@ -128,7 +128,7 @@ export function startGame({ term, input, flare, surge, onExit, palette }) {
     term.innerHTML = savedHTML;
     if (input) { input.disabled = false; input.focus(); }
     if (won) { flare && flare(2200); surge && surge(900); }
-    onExit && onExit(`${msg}  (score ${score})`);
+    onExit && onExit(`${msg}  (score ${score})`, score);
   }
 
   render();

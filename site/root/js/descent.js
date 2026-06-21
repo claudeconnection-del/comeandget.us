@@ -328,7 +328,7 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
     term.innerHTML = savedHTML;
     if (input) { input.disabled = false; input.focus(); }
     if (won) { flare && flare(2400); surge && surge(1000); }
-    onExit && onExit(`${msg}  (${kills} kills, reached E1M${level + 1})`);
+    onExit && onExit(`${msg}  (${kills} kills, reached E1M${level + 1})`, kills);
   }
 
   render();
