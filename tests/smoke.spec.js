@@ -217,6 +217,22 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#cmd")).toBeEnabled();
   });
 
+  test("up/down arrows recall command history", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "whoami");
+    await page.press("#cmd", "Enter");
+    await page.fill("#cmd", "fortune");
+    await page.press("#cmd", "Enter");
+    await page.press("#cmd", "ArrowUp");
+    await expect(page.locator("#cmd")).toHaveValue("fortune");
+    await page.press("#cmd", "ArrowUp");
+    await expect(page.locator("#cmd")).toHaveValue("whoami");
+    await page.press("#cmd", "ArrowDown");
+    await expect(page.locator("#cmd")).toHaveValue("fortune");
+    await page.press("#cmd", "ArrowDown");
+    await expect(page.locator("#cmd")).toHaveValue("");
+  });
+
   test("games render in colour", async ({ page }) => {
     await page.goto("/root/");
     await page.fill("#cmd", "snake");

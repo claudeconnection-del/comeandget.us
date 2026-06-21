@@ -651,13 +651,39 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   CMD.weather = () => "forecast: rain, then fire, then rain. as usual.";
   CMD.whois = () => "domain: comeandget.us\nregistrant: redacted\nstatus: watching\nnameservers: the ones you came through";
 
+  // --- command history (up/down recall) ---
+  const history = [];
+  let histIdx = 0;
+  let draft = "";
+  input.addEventListener("keydown", (e) => {
+    if (state.gaming) return;
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!history.length) return;
+      if (histIdx === history.length) draft = input.value;
+      histIdx = Math.max(0, histIdx - 1);
+      input.value = history[histIdx];
+      input.setSelectionRange(input.value.length, input.value.length);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (histIdx >= history.length) return;
+      histIdx = Math.min(history.length, histIdx + 1);
+      input.value = histIdx === history.length ? draft : history[histIdx];
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+  });
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const raw = input.value;
     input.value = "";
     if (state.gaming) return; // the game owns the keyboard
+    const trimmed = raw.trim();
+    if (trimmed && history[history.length - 1] !== trimmed) history.push(trimmed);
+    histIdx = history.length;
+    draft = "";
     println("PS C:\\> " + raw);
-    if (state.ritual) { handleRitual(raw.trim()); return; }
+    if (state.ritual) { handleRitual(trimmed); return; }
     const res = run(raw);
     if (res) println(res);
   });
