@@ -3,18 +3,18 @@
 
 import { paint } from "./ink.js";
 
-const COLOR = (ch, x, y) => {
-  if (y === 0) return "#b9b29a"; // HUD
-  switch (ch) {
-    case "#": return "#5a5a4a"; // wall
-    case "@": return "#aef58a"; // head
-    case "o": return "#5fae5f"; // body
-    case "*": return "#ff5d5d"; // food
-    default: return "inherit";
-  }
-};
-
-export function startSnake({ term, input, flare, surge, onExit }) {
+export function startSnake({ term, input, flare, surge, onExit, palette }) {
+  const P = palette || {};
+  const COLOR = (ch, x, y) => {
+    if (y === 0) return P.hud || "#b9b29a";
+    switch (ch) {
+      case "#": return P.wallEdge;
+      case "@": return P.snakeHead;
+      case "o": return P.snake;
+      case "*": return P.food;
+      default: return "inherit";
+    }
+  };
   const W = 38, H = 16;
   let snake = [{ x: 8, y: 8 }];
   let dir = { x: 1, y: 0 };

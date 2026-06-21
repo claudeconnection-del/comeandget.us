@@ -5,25 +5,25 @@
 
 import { paint } from "./ink.js";
 
-const COLOR = (ch, x, y) => {
-  if (y === 0) return "#b9b29a"; // HUD
-  switch (ch) {
-    case "▓": return "#9aa884";
-    case "▒": return "#6b7a5e";
-    case "░": return "#46523e";
-    case "·": return "#2e372a";
-    case ".": return "#2a2a22"; // floor
-    case "$": return "#ffd23b"; // exit
-    case "█": return "#ff4d4d"; // imp body
-    case "@": return "#ff8a8a"; // imp head
-    case "+": return "#7fe7ff"; // crosshair
-    case "▆": return "#9a9a9a"; // weapon
-    case "*": return "#ffe23b"; // muzzle flash
-    default: return "inherit";
-  }
-};
-
-export function startDoom({ term, input, flare, surge, onExit }) {
+export function startDoom({ term, input, flare, surge, onExit, palette }) {
+  const P = palette || {};
+  const COLOR = (ch, x, y) => {
+    if (y === 0) return P.hud || "#b9b29a";
+    switch (ch) {
+      case "▓": return P.wall0;
+      case "▒": return P.wall1;
+      case "░": return P.wall2;
+      case "·": return P.wall3;
+      case ".": return P.floor;
+      case "$": return P.exit;
+      case "█": return P.enemy;
+      case "@": return P.enemyHead;
+      case "+": return P.crosshair;
+      case "▆": return P.weapon;
+      case "*": return P.muzzle;
+      default: return "inherit";
+    }
+  };
   const MAP = [
     "##################",
     "#S...............#",

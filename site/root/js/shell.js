@@ -7,6 +7,7 @@
 import { startGame } from "./arcade.js";
 import { startDoom } from "./descent.js";
 import { startSnake } from "./serpent.js";
+import { shade, lighten } from "./ink.js";
 
 export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   function println(text = "") {
@@ -98,20 +99,32 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
 
   const THEMES = {
     fire: { vars: { "--bg": "#060402", "--ember": "#ff7a18", "--spark": "#ffd27a", "--ash": "#c9a98a", "--term-fg": "#f4ecdd" }, rain: { fade: "6,4,2", glow: "#ff5200", deep: "#a8330a", body: "#ff6f16", bodyHot: "#ffa648", head: "#ffe2a6", headHot: "#fff7da", ember: ["#ffe9ad", "#ff7a18", "#b3271e"] } },
-    matrix: { vars: { "--bg": "#000600", "--ember": "#00ff66", "--spark": "#b9ffcf", "--ash": "#5fae7f", "--term-fg": "#d7ffe6" }, rain: { fade: "0,6,0", glow: "#00ff66", deep: "#0a7a33", body: "#19c764", bodyHot: "#7dffa8", head: "#d7ffe6", headHot: "#ffffff", ember: ["#d7ffe6", "#19c764", "#0a7a33"] } },
+    matrix: { vars: { "--bg": "#000600", "--ember": "#00ff66", "--spark": "#b9ffcf", "--ash": "#5fae7f", "--term-fg": "#d7ffe6" }, rain: { fade: "0,6,0", glow: "#00ff66", deep: "#0a7a33", body: "#19c764", bodyHot: "#7dffa8", head: "#d7ffe6", headHot: "#ffffff", ember: ["#d7ffe6", "#19c764", "#0a7a33"], glyphs: "01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ" } },
     ice: { vars: { "--bg": "#02060a", "--ember": "#38bdf8", "--spark": "#bae6fd", "--ash": "#7fb0c8", "--term-fg": "#e6f6ff" }, rain: { fade: "2,6,10", glow: "#38bdf8", deep: "#0c4a6e", body: "#2aa6e0", bodyHot: "#9bd8f6", head: "#e6f6ff", headHot: "#ffffff", ember: ["#e6f6ff", "#38bdf8", "#0c4a6e"] } },
     amber: { vars: { "--bg": "#0a0600", "--ember": "#ffb000", "--spark": "#ffe08a", "--ash": "#d8b878", "--term-fg": "#fff3d6" }, rain: { fade: "10,6,0", glow: "#ff8c00", deep: "#7a4a00", body: "#ffb000", bodyHot: "#ffd36b", head: "#fff3d6", headHot: "#ffffff", ember: ["#fff3d6", "#ffb000", "#7a4a00"] } },
     blood: { vars: { "--bg": "#080000", "--ember": "#ff3b3b", "--spark": "#ffb3b3", "--ash": "#cc8888", "--term-fg": "#ffe6e6" }, rain: { fade: "8,0,0", glow: "#ff1a1a", deep: "#5a0a0a", body: "#e02222", bodyHot: "#ff6b6b", head: "#ffe0e0", headHot: "#ffffff", ember: ["#ffe0e0", "#e02222", "#5a0a0a"] } },
     vapor: { vars: { "--bg": "#080010", "--ember": "#c77dff", "--spark": "#f0c6ff", "--ash": "#b39ddb", "--term-fg": "#f3e6ff" }, rain: { fade: "6,0,12", glow: "#b14bff", deep: "#3a155e", body: "#a855f7", bodyHot: "#d8a6ff", head: "#f3e6ff", headHot: "#ffffff", ember: ["#f3e6ff", "#ff6ad5", "#a855f7"] } },
     mono: { vars: { "--bg": "#040404", "--ember": "#cccccc", "--spark": "#ffffff", "--ash": "#999999", "--term-fg": "#f0f0f0" }, rain: { fade: "4,4,4", glow: "#888888", deep: "#333333", body: "#bdbdbd", bodyHot: "#eeeeee", head: "#ffffff", headHot: "#ffffff", ember: ["#ffffff", "#bdbdbd", "#555555"] } },
     // --- multi-hue palettes (rain shifts through two/three colours) ---
-    synthwave: { vars: { "--bg": "#0a0014", "--ember": "#ff2bd6", "--spark": "#2bf0ff", "--ash": "#9a6ad0", "--term-fg": "#ffd6ff" }, rain: { fade: "10,0,20", glow: "#ff2bd6", deep: "#3a155e", body: "#b14bff", bodyHot: "#ff6ad5", head: "#2bf0ff", headHot: "#e6ffff", ember: ["#2bf0ff", "#ff2bd6", "#7a2bff"] } },
+    synthwave: { vars: { "--bg": "#0a0014", "--ember": "#ff2bd6", "--spark": "#2bf0ff", "--ash": "#9a6ad0", "--term-fg": "#ffd6ff" }, rain: { fade: "10,0,20", glow: "#ff2bd6", deep: "#3a155e", body: "#b14bff", bodyHot: "#ff6ad5", head: "#2bf0ff", headHot: "#e6ffff", ember: ["#2bf0ff", "#ff2bd6", "#7a2bff"], glyphs: "01<>[]{}()/\\=+*~" } },
     inferno: { vars: { "--bg": "#0a0300", "--ember": "#ff7a18", "--spark": "#ffd23b", "--ash": "#d89a6a", "--term-fg": "#ffe9c8" }, rain: { fade: "10,3,0", glow: "#ff3b00", deep: "#5a1500", body: "#ff5a1f", bodyHot: "#ffb000", head: "#ffe23b", headHot: "#ffffff", ember: ["#ffe23b", "#ff5a1f", "#7a1500"] } },
-    toxic: { vars: { "--bg": "#040a00", "--ember": "#aaff00", "--spark": "#eaff6a", "--ash": "#7aa84a", "--term-fg": "#e8ffd0" }, rain: { fade: "4,10,0", glow: "#88ff00", deep: "#1a3a00", body: "#5fce1f", bodyHot: "#c8ff5a", head: "#eaff6a", headHot: "#ffffff", ember: ["#eaff6a", "#88ff00", "#1a3a00"] } },
+    toxic: { vars: { "--bg": "#040a00", "--ember": "#aaff00", "--spark": "#eaff6a", "--ash": "#7aa84a", "--term-fg": "#e8ffd0" }, rain: { fade: "4,10,0", glow: "#88ff00", deep: "#1a3a00", body: "#5fce1f", bodyHot: "#c8ff5a", head: "#eaff6a", headHot: "#ffffff", ember: ["#eaff6a", "#88ff00", "#1a3a00"], glyphs: "0123456789ABCDEF%#@&" } },
     oceanic: { vars: { "--bg": "#00060a", "--ember": "#19d3c5", "--spark": "#7fe7ff", "--ash": "#5a9aa8", "--term-fg": "#dffaff" }, rain: { fade: "0,6,10", glow: "#0aa0c0", deep: "#06303a", body: "#1f9ad0", bodyHot: "#5fd8f6", head: "#7fffe6", headHot: "#ffffff", ember: ["#7fffe6", "#1f9ad0", "#06303a"] } },
     ghost: { vars: { "--bg": "#04060a", "--ember": "#a8c0d0", "--spark": "#ffffff", "--ash": "#7a8a96", "--term-fg": "#eef4fa" }, rain: { fade: "4,6,10", glow: "#88aacc", deep: "#1a2630", body: "#5a7a90", bodyHot: "#aac8e0", head: "#ffffff", headHot: "#ffffff", ember: ["#ffffff", "#9ab8d0", "#3a4a56"] } },
     royal: { vars: { "--bg": "#0a0014", "--ember": "#c9a227", "--spark": "#ffe9a8", "--ash": "#9a7ad0", "--term-fg": "#f0e6ff" }, rain: { fade: "8,0,16", glow: "#7a2bff", deep: "#2a1050", body: "#8a4bff", bodyHot: "#c9a227", head: "#ffe9a8", headHot: "#ffffff", ember: ["#ffe9a8", "#8a4bff", "#2a1050"] } },
     sunset: { vars: { "--bg": "#0a0408", "--ember": "#ff6a3d", "--spark": "#ffd06a", "--ash": "#d08aa0", "--term-fg": "#ffe6d6" }, rain: { fade: "10,4,8", glow: "#ff3d6a", deep: "#3a1030", body: "#ff6a3d", bodyHot: "#ffd06a", head: "#ffe6d6", headHot: "#ffffff", ember: ["#ffd06a", "#ff6a3d", "#ff3d6a"] } },
+    // --- pop-culture / sci-fi references ---
+    nostromo: { vars: { "--bg": "#020a02", "--ember": "#2e9e3e", "--spark": "#7dff8a", "--ash": "#4a8a52", "--term-fg": "#b7f5bd" }, rain: { fade: "2,10,2", glow: "#2e9e3e", deep: "#0a3a12", body: "#1f7a2e", bodyHot: "#3ec24e", head: "#7dff8a", headHot: "#dfffe0", ember: ["#7dff8a", "#2e9e3e", "#0a3a12"], glyphs: "01<>[]{}/\\=+." } },
+    tron: { vars: { "--bg": "#00080c", "--ember": "#ff7a18", "--spark": "#6ff7ff", "--ash": "#4a9aa8", "--term-fg": "#d6f9ff" }, rain: { fade: "0,8,12", glow: "#00e0ff", deep: "#06303a", body: "#1f9ad0", bodyHot: "#6ff7ff", head: "#ffffff", headHot: "#ffffff", ember: ["#6ff7ff", "#00e0ff", "#ff7a18"], glyphs: "01<>|/\\[]" } },
+    gameboy: { vars: { "--bg": "#0f380f", "--ember": "#8bac0f", "--spark": "#9bbc0f", "--ash": "#306230", "--term-fg": "#9bbc0f" }, rain: { fade: "15,56,15", glow: "#8bac0f", deep: "#0f380f", body: "#306230", bodyHot: "#8bac0f", head: "#9bbc0f", headHot: "#9bbc0f", ember: ["#9bbc0f", "#306230", "#0f380f"], glyphs: "01" } },
+    hal9000: { vars: { "--bg": "#060000", "--ember": "#ff1a1a", "--spark": "#ff5a5a", "--ash": "#a83a3a", "--term-fg": "#ffd6d6" }, rain: { fade: "8,0,0", glow: "#ff0000", deep: "#2a0000", body: "#c00000", bodyHot: "#ff3b3b", head: "#ff8a8a", headHot: "#ffffff", ember: ["#ff5a5a", "#c00000", "#2a0000"] } },
+    arasaka: { vars: { "--bg": "#0a0204", "--ember": "#ff2a3a", "--spark": "#ffd23b", "--ash": "#a85a4a", "--term-fg": "#ffe0d6" }, rain: { fade: "10,2,4", glow: "#ff2a3a", deep: "#3a0008", body: "#d01020", bodyHot: "#ff5a3a", head: "#ffd23b", headHot: "#ffffff", ember: ["#ffd23b", "#ff2a3a", "#3a0008"] } },
+    blacklodge: { vars: { "--bg": "#0a0204", "--ember": "#d4143a", "--spark": "#f0e6d6", "--ash": "#9a6a6a", "--term-fg": "#f5ebe0" }, rain: { fade: "10,2,4", glow: "#d4143a", deep: "#2a0008", body: "#a01030", bodyHot: "#ff5a7a", head: "#f0e6d6", headHot: "#ffffff", ember: ["#f0e6d6", "#d4143a", "#2a0008"] } },
+    carcosa: { vars: { "--bg": "#0a0800", "--ember": "#d4c020", "--spark": "#f0e86a", "--ash": "#9a8a3a", "--term-fg": "#f2eccf" }, rain: { fade: "10,8,0", glow: "#c0b020", deep: "#2a2800", body: "#8a8a10", bodyHot: "#d4c020", head: "#f0e86a", headHot: "#ffffff", ember: ["#f0e86a", "#8a8a10", "#2a2800"] } },
+    dune: { vars: { "--bg": "#0a0500", "--ember": "#ff8a1f", "--spark": "#3fd0ff", "--ash": "#b87a3a", "--term-fg": "#ffe6c8" }, rain: { fade: "10,5,0", glow: "#ff6a00", deep: "#3a1800", body: "#d87a1f", bodyHot: "#ff8a1f", head: "#3fd0ff", headHot: "#cdfaff", ember: ["#3fd0ff", "#ff8a1f", "#7a2a00"] } },
+    predator: { vars: { "--bg": "#04000a", "--ember": "#ff2a2a", "--spark": "#ffe23b", "--ash": "#c05a3a", "--term-fg": "#ffe6c0" }, rain: { fade: "4,0,10", glow: "#ff2a00", deep: "#2a0060", body: "#d0006a", bodyHot: "#ff7a00", head: "#ffe23b", headHot: "#ffffff", ember: ["#ffe23b", "#ff2a2a", "#2a0060"] } },
+    commodore: { vars: { "--bg": "#1a1450", "--ember": "#8b79d8", "--spark": "#b0a4e8", "--ash": "#6a5fb0", "--term-fg": "#c8bff0" }, rain: { fade: "26,32,80", glow: "#7869c4", deep: "#2a2070", body: "#6a5fb0", bodyHot: "#8b79d8", head: "#b0a4e8", headHot: "#ffffff", ember: ["#b0a4e8", "#7869c4", "#2a2070"], glyphs: "01" } },
+    bsod: { vars: { "--bg": "#00007a", "--ember": "#ffffff", "--spark": "#c8d4ff", "--ash": "#8a9ad8", "--term-fg": "#ffffff" }, rain: { fade: "0,0,70", glow: "#4a6aff", deep: "#000040", body: "#2a4ad0", bodyHot: "#6a8aff", head: "#ffffff", headHot: "#ffffff", ember: ["#ffffff", "#6a8aff", "#000040"], glyphs: "0123456789ABCDEFx:" } },
   };
   const RWORDS = ["come", "and", "get", "us"];
 
@@ -528,11 +541,27 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   }
 
   // --- themes (recolour terminal + rain) ---
+  let activeTheme = "fire";
+  // derive a cohesive game palette from the active theme so the arcade matches it
+  function gamePalette(t) {
+    const r = t.rain, v = t.vars;
+    return {
+      hud: v["--ash"],
+      wall0: shade(r.body, 1.0), wall1: shade(r.body, 0.62), wall2: shade(r.body, 0.4), wall3: shade(r.body, 0.26),
+      floor: shade(r.deep, 0.7),
+      enemy: r.glow, enemyHead: lighten(r.glow, 0.4), boss: r.glow,
+      player: r.bodyHot, bullet: v["--spark"], crosshair: v["--spark"],
+      weapon: shade(v["--ash"], 0.85), muzzle: v["--spark"], exit: v["--ember"],
+      food: r.glow, snake: r.body, snakeHead: r.bodyHot, wallEdge: shade(v["--ash"], 0.5),
+    };
+  }
+
   function applyTheme(name, quiet) {
     const th = THEMES[name];
     if (!th) return `no such theme '${name}'. try: theme list`;
     for (const [k, v] of Object.entries(th.vars)) document.documentElement.style.setProperty(k, v);
     if (setPalette && th.rain) setPalette(th.rain);
+    activeTheme = name;
     try { localStorage.setItem("cg.theme", name); } catch {}
     if (!quiet) { if (flare) flare(700); surge(450); }
     return `palette set: ${name}.`;
@@ -594,7 +623,8 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
     if (state.gaming) return "";
     state.gaming = true;
     surge(700);
-    starter({ term, input, flare, surge, onExit: (msg) => { state.gaming = false; println(msg); } });
+    const palette = gamePalette(THEMES[activeTheme] || THEMES.fire);
+    starter({ term, input, flare, surge, palette, onExit: (msg) => { state.gaming = false; println(msg); } });
     return "";
   }
   CMD.galaga = () => launch(startGame);

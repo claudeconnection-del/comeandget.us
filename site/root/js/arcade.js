@@ -5,18 +5,18 @@
 
 import { paint } from "./ink.js";
 
-const COLOR = (ch, x, y) => {
-  if (y === 0) return ch === "♥" ? "#ff3b3b" : "#b9b29a"; // HUD
-  switch (ch) {
-    case "W": return "#ff6b6b"; // grunt
-    case "M": return "#ff2a2a"; // boss
-    case "|": return "#9bdcff"; // bullet
-    case "A": return "#7cfc55"; // player
-    default: return "inherit";
-  }
-};
-
-export function startGame({ term, input, flare, surge, onExit }) {
+export function startGame({ term, input, flare, surge, onExit, palette }) {
+  const P = palette || {};
+  const COLOR = (ch, x, y) => {
+    if (y === 0) return ch === "♥" ? (P.enemy || "#ff3b3b") : (P.hud || "#b9b29a");
+    switch (ch) {
+      case "W": return P.enemy;
+      case "M": return P.boss;
+      case "|": return P.bullet;
+      case "A": return P.player;
+      default: return "inherit";
+    }
+  };
   const W = 40;
   const H = 16;
 

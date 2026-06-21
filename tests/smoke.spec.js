@@ -242,6 +242,17 @@ test.describe("comeandget.us", () => {
     await page.keyboard.press("q");
   });
 
+  test("games adopt the active theme's colours", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "theme matrix");
+    await page.press("#cmd", "Enter");
+    await page.fill("#cmd", "galaga");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("SCORE");
+    expect(await page.locator('#term span[style*="00ff66"]').count()).toBeGreaterThan(0);
+    await page.keyboard.press("q");
+  });
+
   test("man documents the fun parts and themes persist across reload", async ({ page }) => {
     await page.goto("/root/");
     await page.fill("#cmd", "man doom");

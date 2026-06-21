@@ -5,6 +5,17 @@
 
 const esc = (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === "&" ? "&amp;" : c);
 
+// colour helpers so games can derive a palette from the active theme
+const clamp = (n) => Math.max(0, Math.min(255, Math.round(n)));
+const hexToRgb = (h) => {
+  h = h.replace("#", "");
+  if (h.length === 3) h = [...h].map((c) => c + c).join("");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+};
+const toHex = (r, g, b) => "#" + [r, g, b].map((x) => clamp(x).toString(16).padStart(2, "0")).join("");
+export const shade = (h, f) => { const [r, g, b] = hexToRgb(h); return toHex(r * f, g * f, b * f); };
+export const lighten = (h, f) => { const [r, g, b] = hexToRgb(h); return toHex(r + (255 - r) * f, g + (255 - g) * f, b + (255 - b) * f); };
+
 export function paint(term, rows, colorOf) {
   let html = "";
   for (let y = 0; y < rows.length; y++) {

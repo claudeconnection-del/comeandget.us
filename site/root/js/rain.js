@@ -3,8 +3,8 @@
 // so theme commands can recolour the whole storm. Honours reduced-motion by
 // painting a single static frame. flare() briefly stokes it.
 
-const GLYPHS =
-  "01<>/\\|=+*#$@{}[]?!:;~^ABCDEF0123456789ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾊﾋﾌﾍﾎ".split("");
+const DEFAULT_GLYPHS =
+  "01<>/\\|=+*#$@{}[]?!:;~^ABCDEF0123456789ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾊﾋﾌﾍﾎ";
 
 const FIRE = {
   fade: "6,4,2", // rgba base for the trail-fade rectangle
@@ -28,9 +28,10 @@ export function createRain(canvas) {
   let flareUntil = 0;
   let embers = [];
   let pal = { ...FIRE };
+  let glyphs = DEFAULT_GLYPHS.split("");
 
   const rnd = (n) => (Math.random() * n) | 0;
-  const glyph = () => GLYPHS[rnd(GLYPHS.length)];
+  const glyph = () => glyphs[rnd(glyphs.length)];
 
   function size() {
     canvas.width = window.innerWidth;
@@ -127,12 +128,12 @@ export function createRain(canvas) {
   if (reduce) {
     staticFrame();
     window.addEventListener("resize", staticFrame, { passive: true });
-    return { flare() {}, setPalette(p) { pal = { ...pal, ...p }; staticFrame(); } };
+    return { flare() {}, setPalette(p) { pal = { ...pal, ...p }; if (p.glyphs) glyphs = p.glyphs.split(""); staticFrame(); } };
   }
 
   requestAnimationFrame(frame);
   return {
     flare(ms = 900) { flareUntil = performance.now() + ms; },
-    setPalette(p) { pal = { ...pal, ...p }; },
+    setPalette(p) { pal = { ...pal, ...p }; if (p.glyphs) glyphs = p.glyphs.split(""); },
   };
 }
