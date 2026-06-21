@@ -29,6 +29,7 @@ export function createRain(canvas) {
   let embers = [];
   let pal = { ...FIRE };
   let glyphs = DEFAULT_GLYPHS.split("");
+  let lite = false;
 
   const rnd = (n) => (Math.random() * n) | 0;
   const glyph = () => glyphs[rnd(glyphs.length)];
@@ -94,35 +95,41 @@ export function createRain(canvas) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.shadowColor = pal.glow;
+    ctx.shadowBlur = 0;
     for (let i = 0; i < cols; i++) {
       const x = i * fontSize;
       const y = drops[i] * fontSize;
 
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = pal.deep;
-      ctx.fillText(glyph(), x, y - fontSize * 2);
-
-      ctx.shadowBlur = hot ? 18 : 12;
+      if (!lite) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = pal.deep;
+        ctx.fillText(glyph(), x, y - fontSize * 2);
+        ctx.shadowBlur = hot ? 18 : 12;
+      }
       ctx.fillStyle = hot ? pal.bodyHot : pal.body;
       ctx.fillText(glyph(), x, y - fontSize);
 
-      ctx.shadowBlur = hot ? 28 : 20;
+      if (!lite) ctx.shadowBlur = hot ? 28 : 20;
       ctx.fillStyle = hot ? pal.headHot : pal.head;
       ctx.fillText(glyph(), x, y);
 
       if (y > canvas.height && Math.random() > 0.975) {
         drops[i] = Math.random() * -20;
-        spawnEmber(x, canvas.height - rnd(fontSize * 2));
-        if (hot) spawnEmber(x + rnd(fontSize), canvas.height - rnd(fontSize * 3));
+        if (!lite) {
+          spawnEmber(x, canvas.height - rnd(fontSize * 2));
+          if (hot) spawnEmber(x + rnd(fontSize), canvas.height - rnd(fontSize * 3));
+        }
       }
       drops[i] += hot ? 0.42 : 0.16 + Math.random() * 0.1;
     }
 
-    const spawns = hot ? 3 : 1;
-    for (let s = 0; s < spawns; s++) {
-      if (Math.random() < 0.7) spawnEmber(rnd(canvas.width), canvas.height - rnd(fontSize * 3));
+    if (!lite) {
+      const spawns = hot ? 3 : 1;
+      for (let s = 0; s < spawns; s++) {
+        if (Math.random() < 0.7) spawnEmber(rnd(canvas.width), canvas.height - rnd(fontSize * 3));
+      }
+      drawEmbers(hot);
     }
-    drawEmbers(hot);
 
     ctx.shadowBlur = 0;
   }
@@ -133,12 +140,13 @@ export function createRain(canvas) {
   if (reduce) {
     staticFrame();
     window.addEventListener("resize", staticFrame, { passive: true });
-    return { flare() {}, setPalette(p) { pal = { ...pal, ...p }; if (p.glyphs) glyphs = p.glyphs.split(""); staticFrame(); } };
+    return { flare() {}, setPalette(p) { pal = { ...pal, ...p }; if (p.glyphs) glyphs = p.glyphs.split(""); staticFrame(); }, setLite() {} };
   }
 
   requestAnimationFrame(frame);
   return {
     flare(ms = 900) { flareUntil = performance.now() + ms; },
     setPalette(p) { pal = { ...pal, ...p }; if (p.glyphs) glyphs = p.glyphs.split(""); },
+    setLite(on) { lite = !!on; if (lite) embers = []; },
   };
 }

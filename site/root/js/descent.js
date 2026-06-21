@@ -18,9 +18,16 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
       case "$": return P.exit;
       case "█": return P.enemy;
       case "@": return P.enemyHead;
+      case "M": return P.boss;
       case "+": return P.crosshair;
       case "▆": return P.weapon;
       case "*": return P.muzzle;
+      // minimap inset
+      case "#": return "#3a3a32";
+      case "P": return P.crosshair;
+      case "e": return P.enemy;
+      case "B": return P.boss;
+      case "x": return P.exit;
       default: return "inherit";
     }
   };
@@ -66,6 +73,7 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
   }
   const totalE = enemies.length;
   let health = 100, kills = 0, over = false, won = false, flashUntil = 0;
+  let boss = null, bossSpawned = false, showMap = true, tick = 0;
   const keys = Object.create(null);
 
   const savedHTML = term.innerHTML;
@@ -88,7 +96,13 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
       const rel = Math.abs(norm(Math.atan2(e.y - py, e.x - px) - pa));
       if (rel < 0.14 && d < bestD) { best = e; bestD = d; }
     }
-    if (best) { best.alive = false; kills++; flare && flare(320); surge && surge(220); }
+    if (best) { best.alive = false; kills++; flare && flare(320); surge && surge(220); return; }
+    // no imp in the reticle — try the boss
+    if (boss && boss.alive) {
+      const d = Math.hypot(boss.x - px, boss.y - py);
+      const rel = Math.abs(norm(Math.atan2(boss.y - py, boss.x - px) - pa));
+      if (rel < 0.2 && d < 14) { boss.hp -= 1; flare && flare(360); surge && surge(280); if (boss.hp <= 0) boss.alive = false; }
+    }
   }
 
   function onKeyDown(e) {
@@ -96,6 +110,7 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
     if (["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d", " ", "spacebar", "q", "escape"].includes(k)) e.preventDefault();
     keys[k] = true;
     if (k === " " || k === "spacebar") fire();
+    if (k === "m") showMap = !showMap;
     if (k === "q" || k === "escape") end("you retreat into the rain. E1M1 unfinished.");
   }
   function onKeyUp(e) { keys[e.key.toLowerCase()] = false; }
@@ -106,6 +121,7 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
 
   function step() {
     if (over) return;
+    tick++;
     const turn = 0.13, spd = 0.13;
     if (keys["arrowleft"]) pa -= turn;
     if (keys["arrowright"]) pa += turn;
@@ -126,10 +142,27 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
     for (const e of enemies) {
       if (e.alive && Math.hypot(e.x - px, e.y - py) < 0.7) health -= 4;
     }
+    // escape via the gate
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      if (tileAt(px + dx * 0.6, py + dy * 0.6) === "X") { won = true; return end("LEVEL COMPLETE. E1M1 cleared. the rain roars."); }
+      if (tileAt(px + dx * 0.6, py + dy * 0.6) === "X") { won = true; return end("you reached the gate and ran. E1M1 escaped."); }
     }
-    if (kills >= totalE && totalE) { won = true; return end("all imps down. the gate ahead is yours. (E1M1 cleared)"); }
+    // all imps down -> the boss wakes
+    if (!bossSpawned && kills >= totalE && totalE) {
+      bossSpawned = true;
+      boss = { x: 14.5, y: 1.5, hp: 8, alive: true };
+      flare && flare(1800); surge && surge(1000);
+    }
+    // the boss hunts; killing it ends the level
+    if (boss && boss.alive) {
+      if (tick % 3 === 0) {
+        const ang = Math.atan2(py - boss.y, px - boss.x);
+        const nx = boss.x + Math.cos(ang) * 0.12, ny = boss.y + Math.sin(ang) * 0.12;
+        if (!solid(nx, boss.y)) boss.x = nx;
+        if (!solid(boss.x, ny)) boss.y = ny;
+      }
+      if (Math.hypot(boss.x - px, boss.y - py) < 1.1) health -= 3;
+    }
+    if (bossSpawned && boss && !boss.alive) { won = true; return end("THE BOSS FALLS. E1M1 cleared. the rain howls your name."); }
     if (health <= 0) return end("you died. GAME OVER. (the rain takes everyone eventually)");
     render();
   }
@@ -175,6 +208,34 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
         }
       }
     }
+    // boss billboard — bigger than the imps
+    if (boss && boss.alive) {
+      const d = Math.hypot(boss.x - px, boss.y - py);
+      const rel = norm(Math.atan2(boss.y - py, boss.x - px) - pa);
+      if (Math.abs(rel) <= FOV / 2 && d > 0.4) {
+        const col = Math.round((0.5 + rel / FOV) * VW);
+        const h = Math.min(VH, Math.round((VH / d) * 1.6));
+        const top = Math.max(0, ((VH - h) / 2) | 0);
+        const w = Math.max(2, (h / 2) | 0);
+        for (let cc = col - (w >> 1); cc <= col + (w >> 1); cc++) {
+          if (cc < 0 || cc >= VW || d > zbuf[cc]) continue;
+          for (let r = top; r < top + h && r < VH; r++) buf[r][cc] = "M";
+        }
+      }
+    }
+    // minimap inset (top-right) — toggle with [m]
+    if (showMap) {
+      const MH = MAP.length, MWid = MAP[0].length, ox = VW - MWid - 1, oy = 1;
+      for (let my = 0; my < MH && oy + my < VH; my++) {
+        for (let mx = 0; mx < MWid; mx++) {
+          const tch = MAP[my][mx];
+          if (buf[oy + my]) buf[oy + my][ox + mx] = tch === "#" ? "#" : tch === "X" ? "x" : " ";
+        }
+      }
+      enemies.forEach((e) => { if (e.alive && buf[oy + (e.y | 0)]) buf[oy + (e.y | 0)][ox + (e.x | 0)] = "e"; });
+      if (boss && boss.alive && buf[oy + (boss.y | 0)]) buf[oy + (boss.y | 0)][ox + (boss.x | 0)] = "B";
+      if (buf[oy + (py | 0)]) buf[oy + (py | 0)][ox + (px | 0)] = "P";
+    }
     // crosshair
     const ccx = (VW / 2) | 0, ccy = (VH / 2) | 0;
     if (buf[ccy]) buf[ccy][ccx] = "+";
@@ -187,7 +248,8 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
     if (buf[VH - 1]) { for (let dx = -1; dx <= 1; dx++) if (buf[VH - 1][gx + dx] !== undefined) buf[VH - 1][gx + dx] = "▆"; }
 
     const bar = "│".repeat(Math.max(0, Math.round(health / 10))).padEnd(10, " ");
-    const hud = ` E1M1   HP [${bar}]   KILLS ${kills}/${totalE}    [wasd/←→] move  [space] fire  [q] quit`;
+    const bossHp = boss && boss.alive ? `  BOSS ${"♦".repeat(boss.hp)}` : "";
+    const hud = ` E1M1  HP [${bar}]  K ${kills}/${totalE}${bossHp}   [wasd/←→][space]fire [m]map [q]quit`;
     paint(term, [hud, ...buf.map((r) => r.join(""))], COLOR);
   }
 

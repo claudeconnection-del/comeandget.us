@@ -43,6 +43,7 @@ const { println } = initTerminal({
   decode: decodeToText,
   flare: rain.flare,
   setPalette: rain.setPalette,
+  setLite: rain.setLite,
 });
 
 // A breadcrumb for the Application tab (a Graph scope, base64).

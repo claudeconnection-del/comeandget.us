@@ -242,6 +242,18 @@ test.describe("comeandget.us", () => {
     await page.keyboard.press("q");
   });
 
+  test("lite mode toggles and persists across reload", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "lite on");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("lite mode on");
+    await page.reload();
+    await page.waitForTimeout(150);
+    await page.fill("#cmd", "lite");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("lite mode off");
+  });
+
   test("games adopt the active theme's colours", async ({ page }) => {
     await page.goto("/root/");
     await page.fill("#cmd", "theme matrix");

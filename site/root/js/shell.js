@@ -9,7 +9,7 @@ import { startDoom } from "./descent.js";
 import { startSnake } from "./serpent.js";
 import { shade, lighten } from "./ink.js";
 
-export function initTerminal({ term, input, form, decode, flare, setPalette }) {
+export function initTerminal({ term, input, form, decode, flare, setPalette, setLite }) {
   function println(text = "") {
     term.appendChild(document.createTextNode((Array.isArray(text) ? text.join("\n") : text) + "\n"));
     // bound scrollback so a very long session can't grow the DOM forever
@@ -127,6 +127,15 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
     predator: { vars: { "--bg": "#04000a", "--ember": "#ff2a2a", "--spark": "#ffe23b", "--ash": "#c05a3a", "--term-fg": "#ffe6c0" }, rain: { fade: "4,0,10", glow: "#ff2a00", deep: "#2a0060", body: "#d0006a", bodyHot: "#ff7a00", head: "#ffe23b", headHot: "#ffffff", ember: ["#ffe23b", "#ff2a2a", "#2a0060"] } },
     commodore: { vars: { "--bg": "#1a1450", "--ember": "#8b79d8", "--spark": "#b0a4e8", "--ash": "#6a5fb0", "--term-fg": "#c8bff0" }, rain: { fade: "26,32,80", glow: "#7869c4", deep: "#2a2070", body: "#6a5fb0", bodyHot: "#8b79d8", head: "#b0a4e8", headHot: "#ffffff", ember: ["#b0a4e8", "#7869c4", "#2a2070"], glyphs: "01" } },
     bsod: { vars: { "--bg": "#00007a", "--ember": "#ffffff", "--spark": "#c8d4ff", "--ash": "#8a9ad8", "--term-fg": "#ffffff" }, rain: { fade: "0,0,70", glow: "#4a6aff", deep: "#000040", body: "#2a4ad0", bodyHot: "#6a8aff", head: "#ffffff", headHot: "#ffffff", ember: ["#ffffff", "#6a8aff", "#000040"], glyphs: "0123456789ABCDEFx:" } },
+    bladerunner: { vars: { "--bg": "#04060a", "--ember": "#ff7a3d", "--spark": "#2bd6ff", "--ash": "#c06a8a", "--term-fg": "#ffe6d6" }, rain: { fade: "4,6,10", glow: "#ff3d8a", deep: "#06222a", body: "#1f8ad0", bodyHot: "#ff7a3d", head: "#2bd6ff", headHot: "#ffffff", ember: ["#2bd6ff", "#ff3d8a", "#ff7a3d"] } },
+    akira: { vars: { "--bg": "#060000", "--ember": "#ff1a2e", "--spark": "#ffb000", "--ash": "#a83a3a", "--term-fg": "#ffd6cc" }, rain: { fade: "6,0,0", glow: "#ff1a00", deep: "#2a0000", body: "#c0102a", bodyHot: "#ff5a2a", head: "#ffb000", headHot: "#ffffff", ember: ["#ffb000", "#ff1a2e", "#2a0000"] } },
+    evangelion: { vars: { "--bg": "#060010", "--ember": "#7a3dff", "--spark": "#6aff8a", "--ash": "#b06ad0", "--term-fg": "#e6d6ff" }, rain: { fade: "6,0,16", glow: "#9a3dff", deep: "#1a0a3a", body: "#6a2bd0", bodyHot: "#b06aff", head: "#6aff8a", headHot: "#ffffff", ember: ["#6aff8a", "#9a3dff", "#ff7a18"] } },
+    portal: { vars: { "--bg": "#04060a", "--ember": "#ff8a1f", "--spark": "#2ba8ff", "--ash": "#6a8aa8", "--term-fg": "#e6f2ff" }, rain: { fade: "4,6,10", glow: "#2ba8ff", deep: "#06223a", body: "#1f7ad0", bodyHot: "#6ab8ff", head: "#ff8a1f", headHot: "#ffffff", ember: ["#ff8a1f", "#2ba8ff", "#06223a"] } },
+    aurora: { vars: { "--bg": "#00060a", "--ember": "#3dffb0", "--spark": "#b06aff", "--ash": "#5aa88a", "--term-fg": "#dfffe6" }, rain: { fade: "0,6,10", glow: "#3dffb0", deep: "#0a2a3a", body: "#1fd0a0", bodyHot: "#6affc0", head: "#b06aff", headHot: "#e6d6ff", ember: ["#b06aff", "#3dffb0", "#1f9ad0"] } },
+    bloodmoon: { vars: { "--bg": "#0a0200", "--ember": "#ff3a1a", "--spark": "#ffae6a", "--ash": "#c06a4a", "--term-fg": "#ffd6c0" }, rain: { fade: "10,2,0", glow: "#ff2a00", deep: "#2a0600", body: "#c02810", bodyHot: "#ff5a1f", head: "#ffae6a", headHot: "#fff0d0", ember: ["#ffae6a", "#ff3a1a", "#2a0600"] } },
+    wargames: { vars: { "--bg": "#001000", "--ember": "#33ff66", "--spark": "#ffcc33", "--ash": "#2a9a4a", "--term-fg": "#b7ffce" }, rain: { fade: "0,16,0", glow: "#33ff66", deep: "#0a3a18", body: "#1f9a3e", bodyHot: "#5aff8a", head: "#ffcc33", headHot: "#ffffff", ember: ["#ffcc33", "#33ff66", "#0a3a18"], glyphs: "01" } },
+    plasma: { vars: { "--bg": "#06000a", "--ember": "#ff2bd6", "--spark": "#2bf0ff", "--ash": "#b06ad0", "--term-fg": "#ffe6ff" }, rain: { fade: "6,0,10", glow: "#ff2bff", deep: "#2a0a3a", body: "#b02bd0", bodyHot: "#ff6aff", head: "#ffffff", headHot: "#ffffff", ember: ["#2bf0ff", "#ff2bff", "#ffffff"] } },
+    venom: { vars: { "--bg": "#020402", "--ember": "#6aff3d", "--spark": "#e8ffe0", "--ash": "#4a8a3a", "--term-fg": "#eafff0" }, rain: { fade: "2,4,2", glow: "#6aff00", deep: "#0a2a00", body: "#3ace1f", bodyHot: "#aaff6a", head: "#e8ffe0", headHot: "#ffffff", ember: ["#e8ffe0", "#6aff3d", "#0a2a00"] } },
   };
   const RWORDS = ["come", "and", "get", "us"];
 
@@ -253,7 +262,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
       "commands: help  whoami  sudo  ls [-a]  cd <dir>  cat <file>  pwd  find <x>  tree",
       "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
       "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
-      "          man <x>  echo <x>  theme <name>  ritual  games  clear  exit",
+      "          man <x>  echo <x>  theme <name>  lite  ritual  games  clear  exit",
       "          arcade: galaga  doom  snake     ...and many more you'll have to find.",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
@@ -578,6 +587,17 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   // restore a previously chosen theme (quietly) on load
   try { const saved = localStorage.getItem("cg.theme"); if (saved && THEMES[saved]) applyTheme(saved, true); } catch {}
 
+  // --- lite performance mode (drops rain glow + embers) ---
+  let liteOn = false;
+  CMD.lite = (io) => {
+    const a = (io.tokens[0] || "").toLowerCase();
+    liteOn = a === "on" ? true : a === "off" ? false : !liteOn;
+    if (setLite) setLite(liteOn);
+    try { localStorage.setItem("cg.lite", liteOn ? "1" : "0"); } catch {}
+    return `lite mode ${liteOn ? "on" : "off"} — rain runs ${liteOn ? "lean (no glow, no embers)" : "full"}.`;
+  };
+  try { if (localStorage.getItem("cg.lite") === "1") { liteOn = true; if (setLite) setLite(true); } } catch {}
+
   // --- multi-step unlock ritual (flares harder each step) ---
   function startRitual() {
     state.ritual = { idx: 0 };
@@ -652,6 +672,8 @@ export function initTerminal({ term, input, form, decode, flare, setPalette }) {
     cowsay: "COWSAY(1) — a cow repeats you. wisdom not included.",
     hint: "HINT(1) — points at the real path without walking it for you.",
     "8ball": "8BALL(1) — ask a yes/no question. the rain answers.",
+    lite: "LITE(1) — drops the rain's glow + embers for weak machines. 'lite on' / 'lite off'. sticks across reloads.",
+    map: "MAP(6) — in DOOM, [m] toggles the corner minimap. P=you, e=imp, B=boss, x=gate.",
   };
   CMD.man = (io) => {
     const t = (io.tokens[0] || "").toLowerCase();
