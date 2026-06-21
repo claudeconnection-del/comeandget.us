@@ -60,6 +60,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
         known_hosts: F("comeandget.us — fingerprint changes every time you look."),
         authorized_keys: F("# no keys authorized. we let you in on purpose."),
       }),
+      tunnels: { t: "d", mazeRoot: true, c: {} },
     }),
     var: D({
       log: D({
@@ -69,7 +70,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       }),
     }),
     etc: D({
-      passwd: F("root:x:0:0:root:/root:/bin/false\nneo:x:1000:1000:Global Administrator:/home/neo:/bin/bash\nus:x:666:666:::"),
+      passwd: F("root:x:0:0:root:/root:/bin/false\nneo:x:1000:1000:the one:/home/neo:/bin/bash\nmorpheus:x:1001:1001:captain:/home/morpheus:/bin/bash\ntrinity:x:1002:1002::/home/trinity:/bin/bash\noracle:x:1003:1003:the oracle:/home/oracle:/bin/false\ncypher:x:1009:1009:betrayer:/home/cypher:/bin/bash\nsmith:x:0:0:agent:/:/bin/false\nus:x:666:666:::/dev/null"),
       shadow: X("Permission denied. (and the hashes aren't the answer either.)"),
       hosts: F("127.0.0.1 localhost\n::1 localhost"),
       motd: F("you came and got us. now what?"),
@@ -88,7 +89,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     }),
   });
 
-  const state = { cwd: ["root"], gaming: false, ritual: null };
+  const state = { cwd: ["root"], gaming: false, ritual: null, maze: null };
 
   const MOTD = {
     "/root": "you are home. or what's left of it.",
@@ -167,6 +168,39 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
 
   function readBody(node) {
     return typeof node.body === "function" ? node.body() : node.body;
+  }
+
+  // ---- the tunnels: a shifting, unsolvable maze -------------------------
+  // Lives outside the real FS so it can't grow the DOM/tree. Each move
+  // regenerates the visible doors, so it never maps the same way twice.
+  const MAZE_MAX = 6;
+  const MAZE_WORDS = ["sector", "node", "vault", "relay", "cache", "spool", "shard", "conduit", "grotto", "oubliette", "sublevel", "annex", "crawlspace", "cistern", "substrate", "hollow", "warren", "catacomb", "junction", "reliquary", "duct", "stack", "midden", "lacuna"];
+  const mazeName = () => MAZE_WORDS[rng(MAZE_WORDS.length)] + "-" + Math.random().toString(36).slice(2, 5);
+  function mazeGen(depth) {
+    if (depth >= MAZE_MAX) return [];
+    const set = new Set();
+    const n = 2 + rng(3);
+    while (set.size < n) set.add(mazeName());
+    return [...set];
+  }
+  const mazePwd = () => "/root/tunnels" + state.maze.trail.map((t) => "/" + t).join("");
+  function mazeCd(arg) {
+    const a = (arg || "").trim();
+    if (a === "" || a === ".") return "";
+    if (a === "/" || a === "~" || a === "/root") { state.maze = null; state.cwd = ["root"]; return "you claw back to the surface."; }
+    if (a === "..") {
+      if (!state.maze.trail.length) { state.maze = null; state.cwd = ["root"]; return "you back out of the tunnels. (they reshuffle behind you.)"; }
+      state.maze.trail.pop();
+      state.maze.children = mazeGen(state.maze.trail.length);
+      return "(the way back looks different than the way in.)";
+    }
+    if (state.maze.children.includes(a)) {
+      state.maze.trail.push(a);
+      if (state.maze.trail.length >= MAZE_MAX) { state.maze.children = []; return "the tunnel pinches shut. dead end. (back out — it'll be different.)"; }
+      state.maze.children = mazeGen(state.maze.trail.length);
+      return state.maze.trail.length >= 4 ? "you are deep now. you will not find your way back the same." : "";
+    }
+    return `cd: ${a}: no such tunnel. (was it ever there?)`;
   }
 
   // ---- ASCII art ---------------------------------------------------------
@@ -259,6 +293,44 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     "you want a flag. we want company.",
   ];
 
+  const PINGS = [
+    "PING {h}: 56 data bytes\nRequest timed out. they don't answer pings. only names.",
+    "PING {h}: 64 bytes from 127.0.0.1: icmp_seq=0 ttl=66 time=6.66 ms  (that's you. you pinged yourself.)",
+    "ping: {h}: Name or service not known. (it knows you, though.)",
+    "PING {h}: reply from the rain. time=∞ ms",
+    "PING {h}: 4 packets transmitted, 0 received, 100% loss, 100% dread",
+    "PING {h}: TTL expired in transit. everything expires here.",
+    "PING {h}: Destination host unreachable. emotionally.",
+    "PING {h}: reply from sts.windows.net: token=replayed time=0ms",
+    "ping: socket: Operation not permitted. (you don't have the clearance you think you do.)",
+    "PING {h}: 1 packet transmitted, 1 received — by us. thanks for that.",
+    "PING {h}: reply from the silver bridge. it's been down since '67.",
+    "PING {h}: bytes=32 time<1ms TTL=128  ...and something pinged back.",
+    "PING {h}: General failure. specifically, yours.",
+    "PING {h}: reply from 0.0.0.0 — the void acknowledges you.",
+    "PING {h}: redirected. by a policy that wasn't enforced. ironic.",
+    "PONG.",
+  ];
+
+  // a small cast, each with a thematic password (su <user> <pw> to authenticate)
+  const USERS = {
+    neo: "theone", morpheus: "redpill", trinity: "follow", oracle: "cookies",
+    cypher: "ignorance", tank: "operator", dozer: "zion", switch: "residual",
+    mouse: "womaninred", smith: "inevitable", apoc: "nebuchadnezzar",
+    root: "toor", admin: "admin", guest: "guest", sysop: "godmode", us: "comeandgetus",
+  };
+  const SU_OK = {
+    neo: "welcome back. you never really left.",
+    morpheus: "you took it. you stay in wonderland.",
+    trinity: "dodge this.",
+    oracle: "i'd offer you a cookie, but you took everything already.",
+    smith: "...me. it was always going to be me. inevitable.",
+    cypher: "ignorance is bliss. enjoy the steak.",
+    root: "of course the password was 'toor'. it's always 'toor'.",
+    us: "oh. it's you. it was always going to be you. hello, us.",
+    default: "authenticated. for all the good it'll do you.",
+  };
+
   // ---- commands ----------------------------------------------------------
   const CMD = {
     help: () => [
@@ -280,12 +352,25 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     whoami_priv: () => "SeEnumerateEntireDirectoryPrivilege  SeWatchEveryonePrivilege  Enabled",
     hostname: () => "NEO-WS01",
     sudo: (io) => (io.rest === "su" ? "# you are root. you were always root." : "you are already Global Admin. that was never the hard part."),
-    su: () => "# you are root. you were always root.",
+    su: (io) => {
+      const user = (io.tokens[0] || "").toLowerCase();
+      if (!user) return "# you are root. you were always root.";
+      const pw = io.tokens[1];
+      if (!(user in USERS)) return `su: user ${user} does not exist. (or never did.)`;
+      if (pw === undefined) return `Password: ********\nsu: Authentication failure for '${user}'. (the rain keeps the passwords.)`;
+      if (pw === USERS[user]) { if (flare) flare(700); surge(300); return `su: ${user} authenticated.\n${SU_OK[user] || SU_OK.default}`; }
+      return `su: Authentication failure. ('${pw}'? cute.)`;
+    },
+    users: () => Object.keys(USERS).slice(0, 8).join("  ") + "  ...and us.",
+    w: () => ["USER      TTY    FROM           WHAT", "neo       pts/0  10.13.37.66    reading this", "us        pts/?  everywhere     watching", "you       pts/1  somewhere      (we see you)"].join("\n"),
+    last: () => ["neo       pts/0   still logged in", "morpheus  pts/1   gone. unplugged.", "us        pts/?   never logged out", "you       pts/1   just now — still here"].join("\n"),
+    finger: (io) => { const u = (io.rest || "").toLowerCase(); return (u && u in USERS) ? `Login: ${u}\nName: ${u}\nStatus: present, somehow.\nPlan:\n  watch. wait. answer the mail.` : "finger: no such user. point it elsewhere."; },
     dsregcmd: () => "AzureAdJoined : YES\nTenantName : comeandget\nMDMUrl : Intune\nDeviceAuthStatus : SUCCESS (token replayed, nobody checked)",
 
     // filesystem
-    pwd: () => fmtPath(state.cwd),
+    pwd: () => (state.maze ? mazePwd() : fmtPath(state.cwd)),
     ls: (io) => {
+      if (state.maze) return state.maze.children.length ? state.maze.children.map((c) => c + "/").join("   ") : "(nothing. just walls. and us.)";
       const flags = io.tokens.filter((t) => t.startsWith("-")).join("");
       const showAll = flags.includes("a");
       const long = flags.includes("l");
@@ -307,14 +392,17 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     dir: (io) => CMD.ls(io),
     gci: (io) => CMD.ls(io),
     cd: (io) => {
+      if (state.maze) return mazeCd(io.rest);
       const segs = resolve(io.rest);
       const node = nodeAt(segs);
       if (!node) return `cd: ${io.rest}: No such file or directory`;
       if (node.t !== "d") return `cd: ${io.rest}: Not a directory`;
       state.cwd = segs;
+      if (node.mazeRoot) { state.maze = { trail: [], children: mazeGen(0) }; return "the tunnels. the walls here are not load-bearing — they are not anything. they shift when you look away."; }
       return MOTD[fmtPath(segs)] || "";
     },
     cat: (io) => {
+      if (state.maze) return "cat: only tunnels here — no files, just more tunnels. keep moving (it won't help).";
       if (!io.rest) return "cat: missing operand";
       const node = nodeAt(resolve(io.rest));
       if (!node) return `cat: ${io.rest}: No such file or directory`;
@@ -323,6 +411,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       return readBody(node);
     },
     find: (io) => {
+      if (state.maze) return "the tunnels resist mapping. find finds nothing here.";
       const term2 = (io.rest || "").toLowerCase();
       const hits = [];
       (function walk(node, segs) {
@@ -336,6 +425,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       return hits.length ? hits.join("\n") : `find: nothing matching '${io.rest}'. it never is.`;
     },
     tree: () => {
+      if (state.maze) return "the tunnels resist mapping. they have no shape to draw.";
       const lines = [];
       (function walk(node, depth, name) {
         lines.push("  ".repeat(depth) + name + (node.t === "d" ? "/" : ""));
@@ -344,6 +434,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       return lines.join("\n");
     },
     grep: (io) => {
+      if (state.maze) return "grep: nothing to match. the tunnels are all walls.";
       const t = (io.tokens[0] || "").toLowerCase();
       if (!t) return "usage: grep <term> [file]";
       const lines = [];
@@ -376,7 +467,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     nslookup: () => CMD.dig(),
     "resolve-dnsname": () => CMD.dig(),
     host: () => CMD.dig(),
-    ping: (io) => `Pinging ${io.rest || "comeandget.us"} ...\nRequest timed out. they don't answer pings. only names.`,
+    ping: (io) => pick(PINGS).replace(/\{h\}/g, io.rest || "comeandget.us"),
     traceroute: () => "1  you\n2  also you\n3  * * *\n4  us",
     tracert: () => CMD.traceroute(),
     netstat: () => [
@@ -714,6 +805,9 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     map: "MAP(6) — in DOOM, [m] toggles the corner minimap. P=you, e=imp, B=boss, x=gate.",
     scores: "SCORES(1) — your local best for each game (kept in this browser). also: 'games'.",
     sound: "SOUND(1) — homegrown Web Audio SFX + chiptune themes in the games. 'sound off' mutes. sticks.",
+    su: "SU(1) — su <user> [password]. there's a small cast, each with a thematic password. authenticate one.",
+    tunnels: "TUNNELS(7) — 'cd tunnels'. it reshuffles every time you move. you will not map it. that is the point.",
+    ping: "PING(8) — pings answer in many voices. none of them helpful.",
   };
   CMD.man = (io) => {
     const t = (io.tokens[0] || "").toLowerCase();

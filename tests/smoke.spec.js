@@ -269,6 +269,28 @@ test.describe("comeandget.us", () => {
     await page.keyboard.press("q");
   });
 
+  test("the tunnels are an explorable shifting maze", async ({ page }) => {
+    await page.goto("/root/");
+    const type = async (c) => { await page.fill("#cmd", c); await page.press("#cmd", "Enter"); };
+    await type("cd tunnels");
+    await type("pwd");
+    await expect(page.locator("#term")).toContainText("/root/tunnels");
+    await type("ls");
+    expect((await page.locator("#term").innerText())).toContain("/");
+    await type("cd nope-not-real");
+    await expect(page.locator("#term")).toContainText("no such tunnel");
+  });
+
+  test("su authenticates a themed password", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "su neo theone");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("authenticated");
+    await page.fill("#cmd", "su neo wrong");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("Authentication failure");
+  });
+
   test("sound toggles and persists across reload", async ({ page }) => {
     await page.goto("/root/");
     await page.fill("#cmd", "sound off");
