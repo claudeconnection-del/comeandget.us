@@ -3,6 +3,26 @@
 // fire with space, quit with q. Reach the glowing exit ($) or clear the imps.
 // Self-contained with clean teardown, like the other arcade modules.
 
+import { paint } from "./ink.js";
+
+const COLOR = (ch, x, y) => {
+  if (y === 0) return "#b9b29a"; // HUD
+  switch (ch) {
+    case "▓": return "#9aa884";
+    case "▒": return "#6b7a5e";
+    case "░": return "#46523e";
+    case "·": return "#2e372a";
+    case ".": return "#2a2a22"; // floor
+    case "$": return "#ffd23b"; // exit
+    case "█": return "#ff4d4d"; // imp body
+    case "@": return "#ff8a8a"; // imp head
+    case "+": return "#7fe7ff"; // crosshair
+    case "▆": return "#9a9a9a"; // weapon
+    case "*": return "#ffe23b"; // muzzle flash
+    default: return "inherit";
+  }
+};
+
 export function startDoom({ term, input, flare, surge, onExit }) {
   const MAP = [
     "##################",
@@ -72,13 +92,13 @@ export function startDoom({ term, input, flare, surge, onExit }) {
   }
 
   function onKeyDown(e) {
-    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const k = e.key.toLowerCase();
     if (["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d", " ", "spacebar", "q", "escape"].includes(k)) e.preventDefault();
     keys[k] = true;
     if (k === " " || k === "spacebar") fire();
     if (k === "q" || k === "escape") end("you retreat into the rain. E1M1 unfinished.");
   }
-  function onKeyUp(e) { keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] = false; }
+  function onKeyUp(e) { keys[e.key.toLowerCase()] = false; }
   window.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("keyup", onKeyUp, true);
 
@@ -163,12 +183,12 @@ export function startDoom({ term, input, flare, surge, onExit }) {
     if (performance.now() < flashUntil) {
       for (let dx = -1; dx <= 1; dx++) if (buf[VH - 3] && buf[VH - 3][gx + dx] !== undefined) buf[VH - 3][gx + dx] = "*";
     }
-    if (buf[VH - 2]) buf[VH - 2][gx] = "█";
-    if (buf[VH - 1]) { for (let dx = -1; dx <= 1; dx++) if (buf[VH - 1][gx + dx] !== undefined) buf[VH - 1][gx + dx] = "█"; }
+    if (buf[VH - 2]) buf[VH - 2][gx] = "▆";
+    if (buf[VH - 1]) { for (let dx = -1; dx <= 1; dx++) if (buf[VH - 1][gx + dx] !== undefined) buf[VH - 1][gx + dx] = "▆"; }
 
     const bar = "│".repeat(Math.max(0, Math.round(health / 10))).padEnd(10, " ");
     const hud = ` E1M1   HP [${bar}]   KILLS ${kills}/${totalE}    [wasd/←→] move  [space] fire  [q] quit`;
-    term.textContent = hud + "\n" + buf.map((r) => r.join("")).join("\n");
+    paint(term, [hud, ...buf.map((r) => r.join(""))], COLOR);
   }
 
   function end(msg) {

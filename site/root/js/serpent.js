@@ -1,6 +1,19 @@
 // ASCII Snake. Arrows/WASD steer, eat *, don't bite the walls or yourself.
 // Self-contained with clean teardown, matching the other arcade modules.
 
+import { paint } from "./ink.js";
+
+const COLOR = (ch, x, y) => {
+  if (y === 0) return "#b9b29a"; // HUD
+  switch (ch) {
+    case "#": return "#5a5a4a"; // wall
+    case "@": return "#aef58a"; // head
+    case "o": return "#5fae5f"; // body
+    case "*": return "#ff5d5d"; // food
+    default: return "inherit";
+  }
+};
+
 export function startSnake({ term, input, flare, surge, onExit }) {
   const W = 38, H = 16;
   let snake = [{ x: 8, y: 8 }];
@@ -52,7 +65,7 @@ export function startSnake({ term, input, flare, surge, onExit }) {
     g[food.y][food.x] = "*";
     snake.forEach((s, i) => { g[s.y][s.x] = i === 0 ? "@" : "o"; });
     const hud = ` SNAKE   score ${score}    [wasd/←→] steer   [q] quit`;
-    term.textContent = hud + "\n" + g.map((r) => r.join("")).join("\n");
+    paint(term, [hud, ...g.map((r) => r.join(""))], COLOR);
   }
 
   function end(msg) {

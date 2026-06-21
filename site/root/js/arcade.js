@@ -3,6 +3,19 @@
 // wave 2 drops more plus a boss that eats several hits. Self-contained with
 // clean teardown that restores the terminal.
 
+import { paint } from "./ink.js";
+
+const COLOR = (ch, x, y) => {
+  if (y === 0) return ch === "♥" ? "#ff3b3b" : "#b9b29a"; // HUD
+  switch (ch) {
+    case "W": return "#ff6b6b"; // grunt
+    case "M": return "#ff2a2a"; // boss
+    case "|": return "#9bdcff"; // bullet
+    case "A": return "#7cfc55"; // player
+    default: return "inherit";
+  }
+};
+
 export function startGame({ term, input, flare, surge, onExit }) {
   const W = 40;
   const H = 16;
@@ -103,7 +116,7 @@ export function startGame({ term, input, flare, surge, onExit }) {
     grid[H - 1][px] = "A";
     const bossHp = boss && boss.alive ? `  BOSS ${"♥".repeat(boss.hp)}` : "";
     const hud = ` WAVE ${wave}   SCORE ${score}${bossHp}    [<- ->] move  [space] fire  [q] quit`;
-    term.textContent = hud + "\n" + grid.map((r) => r.join("")).join("\n");
+    paint(term, [hud, ...grid.map((r) => r.join(""))], COLOR);
   }
 
   function end(msg) {

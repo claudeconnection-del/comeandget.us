@@ -48,6 +48,7 @@ const SHIPPED = [
   "/root/js/arcade.js",
   "/root/js/descent.js",
   "/root/js/serpent.js",
+  "/root/js/ink.js",
   "/root/check-in.json",
 ];
 
@@ -214,6 +215,15 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#term")).toContainText("SNAKE");
     await page.keyboard.press("q");
     await expect(page.locator("#cmd")).toBeEnabled();
+  });
+
+  test("games render in colour", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "snake");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("SNAKE");
+    expect(await page.locator("#term span[style*='color']").count()).toBeGreaterThan(0);
+    await page.keyboard.press("q");
   });
 
   test("man documents the fun parts and themes persist across reload", async ({ page }) => {
