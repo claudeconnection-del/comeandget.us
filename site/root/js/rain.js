@@ -82,7 +82,13 @@ export function createRain(canvas) {
     ctx.shadowBlur = 0;
   }
 
-  function frame() {
+  let lastDraw = 0;
+  function frame(t) {
+    requestAnimationFrame(frame);
+    // ~60fps cap: no change on 60Hz displays, but stops 120/144Hz monitors
+    // from re-drawing the storm 2-3x as often for no visible benefit
+    if (t - lastDraw < 13) return;
+    lastDraw = t;
     const hot = performance.now() < flareUntil;
     ctx.fillStyle = `rgba(${pal.fade},0.075)`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -119,7 +125,6 @@ export function createRain(canvas) {
     drawEmbers(hot);
 
     ctx.shadowBlur = 0;
-    requestAnimationFrame(frame);
   }
 
   size();

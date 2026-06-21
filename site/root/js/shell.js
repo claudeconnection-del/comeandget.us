@@ -12,6 +12,8 @@ import { shade, lighten } from "./ink.js";
 export function initTerminal({ term, input, form, decode, flare, setPalette }) {
   function println(text = "") {
     term.appendChild(document.createTextNode((Array.isArray(text) ? text.join("\n") : text) + "\n"));
+    // bound scrollback so a very long session can't grow the DOM forever
+    while (term.childNodes.length > 600) term.removeChild(term.firstChild);
     term.scrollTop = term.scrollHeight;
   }
   const rng = (n) => (Math.random() * n) | 0;
