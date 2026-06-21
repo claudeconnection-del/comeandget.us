@@ -3,7 +3,7 @@
 
 import { paint } from "./ink.js";
 
-export function startSnake({ term, input, flare, surge, onExit, palette }) {
+export function startSnake({ term, input, flare, surge, onExit, palette, audio }) {
   const P = palette || {};
   const COLOR = (ch, x, y) => {
     if (y === 0) return P.hud || "#b9b29a";
@@ -52,10 +52,11 @@ export function startSnake({ term, input, flare, surge, onExit, palette }) {
     dir = pending;
     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
     if (head.x <= 0 || head.x >= W - 1 || head.y <= 0 || head.y >= H - 1 || snake.some((s) => s.x === head.x && s.y === head.y)) {
+      audio && audio.sfx.die();
       return end("you bit the dark. GAME OVER.");
     }
     snake.unshift(head);
-    if (head.x === food.x && head.y === food.y) { score++; flare && flare(260); surge && surge(180); food = spawn(); }
+    if (head.x === food.x && head.y === food.y) { score++; flare && flare(260); surge && surge(180); audio && audio.sfx.eat(); food = spawn(); }
     else snake.pop();
     render();
   }

@@ -5,7 +5,7 @@
 
 import { paint } from "./ink.js";
 
-export function startDoom({ term, input, flare, surge, onExit, palette }) {
+export function startDoom({ term, input, flare, surge, onExit, palette, audio }) {
   const P = palette || {};
   const COLOR = (ch, x, y) => {
     if (y === 0) return P.hud || "#b9b29a";
@@ -129,8 +129,10 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
       loadLevel(level + 1);
       health = Math.min(100, health + 25);
       flare && flare(1600); surge && surge(900);
+      audio && audio.sfx.level();
     } else {
       won = true;
+      audio && audio.sfx.win();
       end(`EPISODE COMPLETE. all gates cleared. ${reason}`);
     }
   }
@@ -144,11 +146,13 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
   term.classList.add("gaming");
   term.style.color = "#a7b388"; // dim phosphor so the level isn't blinding
   if (input) { input.blur(); input.disabled = true; }
+  if (audio) audio.music("doom");
 
   const norm = (a) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 
   function fire() {
     flare && flare(140);
+    audio && audio.sfx.shoot();
     flashUntil = performance.now() + 130;
     let best = null, bestD = 9;
     for (const e of enemies) {
@@ -157,12 +161,12 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
       const rel = Math.abs(norm(Math.atan2(e.y - py, e.x - px) - pa));
       if (rel < 0.14 && d < bestD) { best = e; bestD = d; }
     }
-    if (best) { best.alive = false; kills++; levelKills++; flare && flare(320); surge && surge(220); return; }
+    if (best) { best.alive = false; kills++; levelKills++; flare && flare(320); surge && surge(220); audio && audio.sfx.kill(); return; }
     // no imp in the reticle — try the boss
     if (boss && boss.alive) {
       const d = Math.hypot(boss.x - px, boss.y - py);
       const rel = Math.abs(norm(Math.atan2(boss.y - py, boss.x - px) - pa));
-      if (rel < 0.2 && d < 14) { boss.hp -= 1; flare && flare(360); surge && surge(280); if (boss.hp <= 0) boss.alive = false; }
+      if (rel < 0.2 && d < 14) { boss.hp -= 1; flare && flare(360); surge && surge(280); audio && audio.sfx.hit(); if (boss.hp <= 0) { boss.alive = false; audio && audio.sfx.kill(); } }
     }
   }
 
@@ -225,7 +229,7 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
       if (Math.hypot(boss.x - px, boss.y - py) < 1.1) health -= 3;
     }
     if (bossSpawned && boss && !boss.alive) return advanceLevel("the boss falls.");
-    if (health <= 0) return end("you died. GAME OVER. (the rain takes everyone eventually)");
+    if (health <= 0) { audio && audio.sfx.die(); return end("you died. GAME OVER. (the rain takes everyone eventually)"); }
     render();
   }
 

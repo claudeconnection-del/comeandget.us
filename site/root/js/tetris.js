@@ -1,7 +1,7 @@
 // ASCII Tetris. ←/→ move, ↑ rotate, ↓ soft drop, space hard drop, q quits.
 import { paint } from "./ink.js";
 
-export function startTetris({ term, input, flare, surge, onExit, palette }) {
+export function startTetris({ term, input, flare, surge, onExit, palette, audio }) {
   const P = palette || {};
   const W = 10, H = 20;
   const COLOR = (ch, x, y) => {
@@ -34,6 +34,7 @@ export function startTetris({ term, input, flare, surge, onExit, palette }) {
   const savedHTML = term.innerHTML, savedMax = term.style.maxHeight, savedOverflow = term.style.overflow;
   term.classList.add("gaming");
   if (input) { input.blur(); input.disabled = true; }
+  if (audio) audio.music("tetris");
 
   const collide = (cells, ox, oy) => cells.some(([x, y]) => {
     const gx = ox + x, gy = oy + y;
@@ -43,14 +44,14 @@ export function startTetris({ term, input, flare, surge, onExit, palette }) {
   function spawn() {
     const t = TYPES[(Math.random() * TYPES.length) | 0];
     cur = { type: t, cells: SHAPES[t].map((c) => c.slice()), ox: 3, oy: 0 };
-    if (collide(cur.cells, cur.ox, cur.oy)) { over = true; end("the stack reached the sky. GAME OVER."); }
+    if (collide(cur.cells, cur.ox, cur.oy)) { over = true; audio && audio.sfx.die(); end("the stack reached the sky. GAME OVER."); }
   }
 
   function rotate() {
     const r = cur.cells.map(([x, y]) => [y, -x]);
     const minx = Math.min(...r.map((c) => c[0])), miny = Math.min(...r.map((c) => c[1]));
     const norm = r.map(([x, y]) => [x - minx, y - miny]);
-    if (!collide(norm, cur.ox, cur.oy)) cur.cells = norm;
+    if (!collide(norm, cur.ox, cur.oy)) { cur.cells = norm; audio && audio.sfx.rotate(); }
   }
 
   function move(dx, dy) {
@@ -60,11 +61,12 @@ export function startTetris({ term, input, flare, surge, onExit, palette }) {
 
   function lock() {
     cur.cells.forEach(([x, y]) => { if (cur.oy + y >= 0) well[cur.oy + y][cur.ox + x] = cur.type; });
+    audio && audio.sfx.lock();
     let cleared = 0;
     for (let y = H - 1; y >= 0; y--) {
       if (well[y].every((c) => c)) { well.splice(y, 1); well.unshift(Array(W).fill("")); cleared++; y++; }
     }
-    if (cleared) { score += [0, 100, 300, 500, 800][cleared]; lines += cleared; flare && flare(200 + cleared * 200); surge && surge(150 + cleared * 150); }
+    if (cleared) { score += [0, 100, 300, 500, 800][cleared]; lines += cleared; flare && flare(200 + cleared * 200); surge && surge(150 + cleared * 150); audio && audio.sfx.clear(); }
     spawn();
   }
 

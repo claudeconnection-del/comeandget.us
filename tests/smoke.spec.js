@@ -52,6 +52,7 @@ const SHIPPED = [
   "/root/js/breakout.js",
   "/root/js/tetris.js",
   "/root/js/ink.js",
+  "/root/js/audio.js",
   "/root/check-in.json",
 ];
 
@@ -266,6 +267,18 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#term")).toContainText("SCORE");
     expect(await page.locator('#term span[style*="00ff66"]').count()).toBeGreaterThan(0);
     await page.keyboard.press("q");
+  });
+
+  test("sound toggles and persists across reload", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "sound off");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("sound off");
+    await page.reload();
+    await page.waitForTimeout(150);
+    await page.fill("#cmd", "sound");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("sound on");
   });
 
   test("high scores persist and the scores board lists games", async ({ page }) => {

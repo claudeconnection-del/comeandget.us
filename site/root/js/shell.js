@@ -12,7 +12,7 @@ import { startBreakout } from "./breakout.js";
 import { startTetris } from "./tetris.js";
 import { shade, lighten } from "./ink.js";
 
-export function initTerminal({ term, input, form, decode, flare, setPalette, setLite }) {
+export function initTerminal({ term, input, form, decode, flare, setPalette, setLite, audio }) {
   function println(text = "") {
     term.appendChild(document.createTextNode((Array.isArray(text) ? text.join("\n") : text) + "\n"));
     // bound scrollback so a very long session can't grow the DOM forever
@@ -601,6 +601,18 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   };
   try { if (localStorage.getItem("cg.lite") === "1") { liteOn = true; if (setLite) setLite(true); } } catch {}
 
+  // --- sound toggle (games are loud by default; this mutes) ---
+  CMD.sound = (io) => {
+    const a = (io.tokens[0] || "").toLowerCase();
+    const on = a === "off" || a === "mute" ? false : a === "on" ? true : !(audio && audio.isEnabled());
+    if (audio) audio.setEnabled(on);
+    try { localStorage.setItem("cg.sound", on ? "1" : "0"); } catch {}
+    return `sound ${on ? "on" : "off"}.`;
+  };
+  CMD.mute = () => CMD.sound({ tokens: ["off"] });
+  CMD.unmute = () => CMD.sound({ tokens: ["on"] });
+  try { if (localStorage.getItem("cg.sound") === "0" && audio) audio.setEnabled(false); } catch {}
+
   // --- multi-step unlock ritual (flares harder each step) ---
   function startRitual() {
     state.ritual = { idx: 0 };
@@ -662,7 +674,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     state.gaming = true;
     surge(700);
     const palette = gamePalette(THEMES[activeTheme] || THEMES.fire);
-    starter({ term, input, flare, surge, palette, onExit: (msg, score) => { state.gaming = false; println(msg + record(id, score)); } });
+    starter({ term, input, flare, surge, palette, audio, onExit: (msg, score) => { state.gaming = false; if (audio) audio.stopMusic(); println(msg + record(id, score)); } });
     return "";
   }
   CMD.galaga = () => launch(startGame, "galaga");
@@ -701,6 +713,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     lite: "LITE(1) — drops the rain's glow + embers for weak machines. 'lite on' / 'lite off'. sticks across reloads.",
     map: "MAP(6) — in DOOM, [m] toggles the corner minimap. P=you, e=imp, B=boss, x=gate.",
     scores: "SCORES(1) — your local best for each game (kept in this browser). also: 'games'.",
+    sound: "SOUND(1) — homegrown Web Audio SFX + chiptune themes in the games. 'sound off' mutes. sticks.",
   };
   CMD.man = (io) => {
     const t = (io.tokens[0] || "").toLowerCase();

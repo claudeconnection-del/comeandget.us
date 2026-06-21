@@ -1,7 +1,9 @@
 import { createRain } from "./rain.js";
 import { initTerminal } from "./shell.js";
+import { createAudio } from "./audio.js";
 
 const rain = createRain(document.getElementById("rain"));
+const audio = createAudio();
 
 const EMBER = "color:#ff7a18;font-family:monospace";
 const SPARK = "color:#ffd27a;font-family:monospace";
@@ -44,6 +46,7 @@ const { println } = initTerminal({
   flare: rain.flare,
   setPalette: rain.setPalette,
   setLite: rain.setLite,
+  audio,
 });
 
 // A breadcrumb for the Application tab (a Graph scope, base64).

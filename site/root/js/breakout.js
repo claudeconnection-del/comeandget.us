@@ -1,7 +1,7 @@
 // ASCII Breakout. left/right move the paddle, clear the bricks, 3 lives, q quits.
 import { paint } from "./ink.js";
 
-export function startBreakout({ term, input, flare, surge, onExit, palette }) {
+export function startBreakout({ term, input, flare, surge, onExit, palette, audio }) {
   const P = palette || {};
   const W = 40, H = 22, TOP = 2, ROWS = 3, PADW = 7;
   const ROWCH = ["=", "▬", "*"]; // per-row brick char (-> per-row colour)
@@ -48,17 +48,18 @@ export function startBreakout({ term, input, flare, surge, onExit, palette }) {
     if (stuck) { bx = px + PADW / 2; by = H - 4; return render(); }
 
     bx += vx; by += vy;
-    if (bx <= 1 || bx >= W - 2) { vx *= -1; bx = Math.max(1, Math.min(W - 2, bx)); }
-    if (by <= 1) { vy *= -1; by = 1; }
+    if (bx <= 1 || bx >= W - 2) { vx *= -1; bx = Math.max(1, Math.min(W - 2, bx)); audio && audio.sfx.bounce(); }
+    if (by <= 1) { vy *= -1; by = 1; audio && audio.sfx.bounce(); }
     const cy = by | 0, cx = bx | 0;
-    if (brick[cy] && brick[cy][cx]) { brick[cy][cx] = ""; count--; vy *= -1; score += 10; flare && flare(150); surge && surge(120); }
-    if (by >= H - 3 && bx >= px && bx < px + PADW) { vy = -Math.abs(vy); vx += (bx - (px + PADW / 2)) * 0.12; }
+    if (brick[cy] && brick[cy][cx]) { brick[cy][cx] = ""; count--; vy *= -1; score += 10; flare && flare(150); surge && surge(120); audio && audio.sfx.hit(); }
+    if (by >= H - 3 && bx >= px && bx < px + PADW) { vy = -Math.abs(vy); vx += (bx - (px + PADW / 2)) * 0.12; audio && audio.sfx.bounce(); }
     if (by >= H - 1) {
       lives--;
-      if (lives <= 0) return end("the wall won. GAME OVER.");
+      if (lives <= 0) { audio && audio.sfx.die(); return end("the wall won. GAME OVER."); }
+      audio && audio.sfx.blip();
       stuck = true; vx = 0.5; vy = -0.8;
     }
-    if (count <= 0) { won = true; return end("WALL CLEARED. the rain breaks with you."); }
+    if (count <= 0) { won = true; audio && audio.sfx.win(); return end("WALL CLEARED. the rain breaks with you."); }
     render();
   }
 

@@ -5,7 +5,7 @@
 
 import { paint } from "./ink.js";
 
-export function startGame({ term, input, flare, surge, onExit, palette }) {
+export function startGame({ term, input, flare, surge, onExit, palette, audio }) {
   const P = palette || {};
   const COLOR = (ch, x, y) => {
     if (y === 0) return ch === "♥" ? (P.enemy || "#ff3b3b") : (P.hud || "#b9b29a");
@@ -54,7 +54,7 @@ export function startGame({ term, input, flare, surge, onExit, palette }) {
     if (k === "ArrowLeft") px = Math.max(1, px - 1);
     else if (k === "ArrowRight") px = Math.min(W - 2, px + 1);
     else if (k === " " || k === "Spacebar" || k === "ArrowUp") {
-      if (bullets.length < 4) { bullets.push({ x: px, y: H - 2 }); flare && flare(140); }
+      if (bullets.length < 4) { bullets.push({ x: px, y: H - 2 }); flare && flare(140); audio && audio.sfx.shoot(); }
     } else if (k === "q" || k === "Q" || k === "Escape") {
       end("you bailed. they respect that. a little.");
     }
@@ -83,16 +83,16 @@ export function startGame({ term, input, flare, surge, onExit, palette }) {
 
     bullets.forEach((b) => {
       enemies.forEach((en) => {
-        if (en.alive && en.x === b.x && en.y === b.y) { en.alive = false; b.y = -1; score++; flare && flare(280); surge && surge(180); }
+        if (en.alive && en.x === b.x && en.y === b.y) { en.alive = false; b.y = -1; score++; flare && flare(280); surge && surge(180); audio && audio.sfx.kill(); }
       });
       if (boss && boss.alive && b.y === boss.y && Math.abs(b.x - boss.x) <= 1) {
-        boss.hp--; b.y = -1; flare && flare(340); surge && surge(240);
-        if (boss.hp <= 0) { boss.alive = false; score += 5; }
+        boss.hp--; b.y = -1; flare && flare(340); surge && surge(240); audio && audio.sfx.hit();
+        if (boss.hp <= 0) { boss.alive = false; score += 5; audio && audio.sfx.kill(); }
       }
     });
     bullets = bullets.filter((b) => b.y >= 0);
 
-    if (enemies.some((en) => en.alive && en.y >= H - 1)) return end("an enemy reached the line. GAME OVER.");
+    if (enemies.some((en) => en.alive && en.y >= H - 1)) { audio && audio.sfx.die(); return end("an enemy reached the line. GAME OVER."); }
 
     if (enemies.every((en) => !en.alive) && (!boss || !boss.alive)) {
       wave++;
@@ -100,6 +100,7 @@ export function startGame({ term, input, flare, surge, onExit, palette }) {
       spawnWave(wave);
       flare && flare(1200);
       surge && surge(700);
+      audio && audio.sfx.level();
     }
     render();
   }

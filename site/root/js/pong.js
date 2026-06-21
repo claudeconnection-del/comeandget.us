@@ -1,7 +1,7 @@
 // ASCII Pong vs a passable AI. w/s or up/down to move, first to 5, q quits.
 import { paint } from "./ink.js";
 
-export function startPong({ term, input, flare, surge, onExit, palette }) {
+export function startPong({ term, input, flare, surge, onExit, palette, audio }) {
   const P = palette || {};
   const W = 46, H = 20, WIN = 5, PAD = 3;
   const COLOR = (ch, x, y) => {
@@ -46,13 +46,13 @@ export function startPong({ term, input, flare, surge, onExit, palette }) {
     else if (py2 > target) py2 = Math.max(1, py2 - 0.7);
 
     bx += vx; by += vy;
-    if (by <= 1 || by >= H - 2) { vy *= -1; by = Math.max(1, Math.min(H - 2, by)); }
-    if (bx <= 2 && by >= py1 && by < py1 + PAD) { vx = Math.abs(vx) * 1.04; vy += (by - (py1 + PAD / 2)) * 0.18; flare && flare(110); }
-    if (bx >= W - 3 && by >= py2 && by < py2 + PAD) { vx = -Math.abs(vx) * 1.04; vy += (by - (py2 + PAD / 2)) * 0.18; }
-    if (bx < 1) { s2++; reset(-1); }
-    else if (bx > W - 2) { s1++; reset(1); flare && flare(240); surge && surge(160); }
-    if (s1 >= WIN) { won = true; return end("YOU WIN. the rain applauds."); }
-    if (s2 >= WIN) return end("you lost to a machine. GAME OVER.");
+    if (by <= 1 || by >= H - 2) { vy *= -1; by = Math.max(1, Math.min(H - 2, by)); audio && audio.sfx.bounce(); }
+    if (bx <= 2 && by >= py1 && by < py1 + PAD) { vx = Math.abs(vx) * 1.04; vy += (by - (py1 + PAD / 2)) * 0.18; flare && flare(110); audio && audio.sfx.bounce(); }
+    if (bx >= W - 3 && by >= py2 && by < py2 + PAD) { vx = -Math.abs(vx) * 1.04; vy += (by - (py2 + PAD / 2)) * 0.18; audio && audio.sfx.bounce(); }
+    if (bx < 1) { s2++; reset(-1); audio && audio.sfx.blip(); }
+    else if (bx > W - 2) { s1++; reset(1); flare && flare(240); surge && surge(160); audio && audio.sfx.point(); }
+    if (s1 >= WIN) { won = true; audio && audio.sfx.win(); return end("YOU WIN. the rain applauds."); }
+    if (s2 >= WIN) { audio && audio.sfx.die(); return end("you lost to a machine. GAME OVER."); }
     render();
   }
 
