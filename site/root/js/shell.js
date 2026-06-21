@@ -7,6 +7,9 @@
 import { startGame } from "./arcade.js";
 import { startDoom } from "./descent.js";
 import { startSnake } from "./serpent.js";
+import { startPong } from "./pong.js";
+import { startBreakout } from "./breakout.js";
+import { startTetris } from "./tetris.js";
 import { shade, lighten } from "./ink.js";
 
 export function initTerminal({ term, input, form, decode, flare, setPalette, setLite }) {
@@ -263,7 +266,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
       "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
       "          man <x>  echo <x>  theme <name>  lite  ritual  games  clear  exit",
-      "          arcade: galaga  doom  snake     ...and many more you'll have to find.",
+      "          arcade: galaga  doom  snake  pong  breakout  tetris    ...and more.",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
     "?": () => CMD.help(),
@@ -657,13 +660,21 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   CMD.descent = () => launch(startDoom);
   CMD.e1m1 = () => launch(startDoom);
   CMD.snake = () => launch(startSnake);
-  CMD.games = () => "arcade: galaga   doom   snake   (also: theme <name>, ritual, fortune)";
+  CMD.pong = () => launch(startPong);
+  CMD.breakout = () => launch(startBreakout);
+  CMD.brick = () => launch(startBreakout);
+  CMD.tetris = () => launch(startTetris);
+  CMD.blocks = () => launch(startTetris);
+  CMD.games = () => "arcade: galaga  doom  snake  pong  breakout  tetris   (also: theme <name>, ritual, fortune)";
 
   // --- man: documents only the fun parts ---
   const MANPAGES = {
     galaga: "GALAGA(6) — two waves and a boss. arrows move, space fires, q quits.",
     doom: "DOOM(6) — E1M1, an ASCII raycaster. wasd/arrows move & turn, space fires, q quits. find the $ exit or clear the imps.",
     snake: "SNAKE(6) — eat the *, don't bite the walls or yourself. arrows/wasd steer, q quits.",
+    pong: "PONG(6) — w/s (or up/down) move your paddle. first to 5 beats the machine.",
+    breakout: "BREAKOUT(6) — left/right move, space launches. clear the wall, 3 lives.",
+    tetris: "TETRIS(6) — left/right move, up rotate, down/space drop. clear lines.",
     theme: "THEME(1) — recolours terminal AND rain. fire matrix ice amber blood vapor mono. sticks across reloads. 'theme random' rolls.",
     ritual: "RITUAL(7) — speak the four words of this place, in order. it opens onto nothing. that is the point.",
     fortune: "FORTUNE(6) — the rain's unsolicited opinion of you.",

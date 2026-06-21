@@ -48,6 +48,9 @@ const SHIPPED = [
   "/root/js/arcade.js",
   "/root/js/descent.js",
   "/root/js/serpent.js",
+  "/root/js/pong.js",
+  "/root/js/breakout.js",
+  "/root/js/tetris.js",
   "/root/js/ink.js",
   "/root/check-in.json",
 ];
@@ -264,6 +267,17 @@ test.describe("comeandget.us", () => {
     expect(await page.locator('#term span[style*="00ff66"]').count()).toBeGreaterThan(0);
     await page.keyboard.press("q");
   });
+
+  for (const g of ["pong", "breakout", "tetris"]) {
+    test(`${g} starts and quits cleanly`, async ({ page }) => {
+      await page.goto("/root/");
+      await page.fill("#cmd", g);
+      await page.press("#cmd", "Enter");
+      await expect(page.locator("#term")).toContainText(g.toUpperCase());
+      await page.keyboard.press("q");
+      await expect(page.locator("#cmd")).toBeEnabled();
+    });
+  }
 
   test("man documents the fun parts and themes persist across reload", async ({ page }) => {
     await page.goto("/root/");
