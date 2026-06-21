@@ -31,19 +31,49 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
       default: return "inherit";
     }
   };
-  const MAP = [
-    "##################",
-    "#S...............#",
-    "#..##..####..##..#",
-    "#..##........##..#",
-    "#......####......#",
-    "#..##..#..#..##..#",
-    "#..##..#e.#..##..#",
-    "#......####......#",
-    "#..##........##..#",
-    "#..##..####..##..#",
-    "#e............e.X#",
-    "##################",
+  const LEVELS = [
+    [
+      "##################",
+      "#S...............#",
+      "#..##..####..##..#",
+      "#..##........##..#",
+      "#......####......#",
+      "#..##..#..#..##..#",
+      "#..##..#e.#..##..#",
+      "#......####......#",
+      "#..##........##..#",
+      "#..##..####..##..#",
+      "#e............e.X#",
+      "##################",
+    ],
+    [
+      "##################",
+      "#S...#......#....X#",
+      "#.##.#.####.#.##.##",
+      "#.#....e..#....#..#",
+      "#.#.####.##.##.##.#",
+      "#...#......e....#.#",
+      "#.#####.####.###.##",
+      "#.....#....#......#",
+      "#.###.#.##.#.####.#",
+      "#...#...e..#.#....#",
+      "#.#.#####.##.#.##.#",
+      "##################",
+    ],
+    [
+      "##################",
+      "#S......##......e#",
+      "#.####..##..####.#",
+      "#.#...........#..#",
+      "#.#.##.####.##...#",
+      "#....#.e..#....#.#",
+      "#.##.#....#.##.#.#",
+      "#..............#.#",
+      "#.##.####.####.#.#",
+      "#e.#........#..#X#",
+      "#..######.###.##.#",
+      "##################",
+    ],
   ];
   const VW = 56, VH = 18, FOV = Math.PI / 3;
   // no full block — keeps near walls from blowing out to a wall of white
@@ -54,6 +84,8 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
     return SHADE[i];
   };
 
+  let level = 0;
+  let MAP = LEVELS[0];
   const tileAt = (x, y) => {
     const r = MAP[Math.floor(y)];
     if (!r) return "#";
@@ -63,17 +95,46 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
   const solid = (x, y) => { const c = tileAt(x, y); return c === "#" || c === "X"; };
 
   let px = 1.5, py = 1.5, pa = 0.3;
-  const enemies = [];
-  for (let y = 0; y < MAP.length; y++) {
-    for (let x = 0; x < MAP[y].length; x++) {
-      const c = MAP[y][x];
-      if (c === "S") { px = x + 0.5; py = y + 0.5; }
-      if (c === "e") enemies.push({ x: x + 0.5, y: y + 0.5, alive: true });
-    }
-  }
-  const totalE = enemies.length;
+  let enemies = [];
+  let totalE = 0, levelKills = 0;
   let health = 100, kills = 0, over = false, won = false, flashUntil = 0;
   let boss = null, bossSpawned = false, showMap = true, tick = 0;
+
+  function loadLevel(n) {
+    level = n; MAP = LEVELS[n]; pa = 0.3; enemies = []; boss = null; bossSpawned = false; levelKills = 0;
+    for (let y = 0; y < MAP.length; y++) {
+      for (let x = 0; x < MAP[y].length; x++) {
+        const c = MAP[y][x];
+        if (c === "S") { px = x + 0.5; py = y + 0.5; }
+        if (c === "e") enemies.push({ x: x + 0.5, y: y + 0.5, alive: true });
+      }
+    }
+    totalE = enemies.length;
+  }
+  function bossSpawnCell() {
+    let best = null, bd = -1;
+    for (let y = 0; y < MAP.length; y++) {
+      for (let x = 0; x < MAP[y].length; x++) {
+        const c = MAP[y][x];
+        if (c === "." || c === "S" || c === "e") {
+          const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+          if (d > bd) { bd = d; best = [x + 0.5, y + 0.5]; }
+        }
+      }
+    }
+    return best || [px, py];
+  }
+  function advanceLevel(reason) {
+    if (level + 1 < LEVELS.length) {
+      loadLevel(level + 1);
+      health = Math.min(100, health + 25);
+      flare && flare(1600); surge && surge(900);
+    } else {
+      won = true;
+      end(`EPISODE COMPLETE. all gates cleared. ${reason}`);
+    }
+  }
+  loadLevel(0);
   const keys = Object.create(null);
 
   const savedHTML = term.innerHTML;
@@ -96,7 +157,7 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
       const rel = Math.abs(norm(Math.atan2(e.y - py, e.x - px) - pa));
       if (rel < 0.14 && d < bestD) { best = e; bestD = d; }
     }
-    if (best) { best.alive = false; kills++; flare && flare(320); surge && surge(220); return; }
+    if (best) { best.alive = false; kills++; levelKills++; flare && flare(320); surge && surge(220); return; }
     // no imp in the reticle — try the boss
     if (boss && boss.alive) {
       const d = Math.hypot(boss.x - px, boss.y - py);
@@ -142,14 +203,15 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
     for (const e of enemies) {
       if (e.alive && Math.hypot(e.x - px, e.y - py) < 0.7) health -= 4;
     }
-    // escape via the gate
+    // escape via the gate -> next level
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      if (tileAt(px + dx * 0.6, py + dy * 0.6) === "X") { won = true; return end("you reached the gate and ran. E1M1 escaped."); }
+      if (tileAt(px + dx * 0.6, py + dy * 0.6) === "X") return advanceLevel("you ran for the gate.");
     }
-    // all imps down -> the boss wakes
-    if (!bossSpawned && kills >= totalE && totalE) {
+    // all imps down -> the boss wakes (far from you, on a real floor tile)
+    if (!bossSpawned && levelKills >= totalE && totalE) {
       bossSpawned = true;
-      boss = { x: 14.5, y: 1.5, hp: 8, alive: true };
+      const c = bossSpawnCell();
+      boss = { x: c[0], y: c[1], hp: 8, alive: true };
       flare && flare(1800); surge && surge(1000);
     }
     // the boss hunts; killing it ends the level
@@ -162,7 +224,7 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
       }
       if (Math.hypot(boss.x - px, boss.y - py) < 1.1) health -= 3;
     }
-    if (bossSpawned && boss && !boss.alive) { won = true; return end("THE BOSS FALLS. E1M1 cleared. the rain howls your name."); }
+    if (bossSpawned && boss && !boss.alive) return advanceLevel("the boss falls.");
     if (health <= 0) return end("you died. GAME OVER. (the rain takes everyone eventually)");
     render();
   }
@@ -248,8 +310,8 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
     if (buf[VH - 1]) { for (let dx = -1; dx <= 1; dx++) if (buf[VH - 1][gx + dx] !== undefined) buf[VH - 1][gx + dx] = "▆"; }
 
     const bar = "│".repeat(Math.max(0, Math.round(health / 10))).padEnd(10, " ");
-    const bossHp = boss && boss.alive ? `  BOSS ${"♦".repeat(boss.hp)}` : "";
-    const hud = ` E1M1  HP [${bar}]  K ${kills}/${totalE}${bossHp}   [wasd/←→][space]fire [m]map [q]quit`;
+    const bossHp = boss && boss.alive ? `  BOSS ${"♦".repeat(Math.min(12, boss.hp))}` : "";
+    const hud = ` E1M${level + 1}  HP [${bar}]  K ${levelKills}/${totalE}${bossHp}   [wasd/←→][space]fire [m]map [q]quit`;
     paint(term, [hud, ...buf.map((r) => r.join(""))], COLOR);
   }
 
@@ -266,7 +328,7 @@ export function startDoom({ term, input, flare, surge, onExit, palette }) {
     term.innerHTML = savedHTML;
     if (input) { input.disabled = false; input.focus(); }
     if (won) { flare && flare(2400); surge && surge(1000); }
-    onExit && onExit(`${msg}  (kills ${kills}/${totalE})`);
+    onExit && onExit(`${msg}  (${kills} kills, reached E1M${level + 1})`);
   }
 
   render();

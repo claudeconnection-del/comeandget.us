@@ -33,11 +33,12 @@ export function startGame({ term, input, flare, surge, onExit, palette }) {
 
   function spawnWave(n) {
     enemies = [];
-    const rows = n === 1 ? 1 : 2;
+    dir = 1;
+    const rows = Math.min(4, 1 + Math.floor(n / 2));
     for (let r = 0; r < rows; r++) {
       for (let c = 4; c < W - 4; c += 4) enemies.push({ x: c, y: r + 1, alive: true });
     }
-    if (n >= 2) boss = { x: (W / 2) | 0, y: 1, hp: 6, alive: true };
+    boss = (n % 3 === 0) ? { x: (W / 2) | 0, y: 1, hp: 4 + n, alive: true } : null;
   }
   spawnWave(1);
 
@@ -68,7 +69,8 @@ export function startGame({ term, input, flare, surge, onExit, palette }) {
     bullets.forEach((b) => (b.y -= 1));
     bullets = bullets.filter((b) => b.y >= 0);
 
-    if (tick % 4 === 0) {
+    const stepEvery = Math.max(2, 5 - Math.floor(wave / 3)); // enemies speed up each few waves
+    if (tick % stepEvery === 0) {
       let edge = false;
       enemies.forEach((en) => { if (en.alive && (en.x + dir < 1 || en.x + dir > W - 2)) edge = true; });
       if (edge) { dir *= -1; enemies.forEach((en) => { if (en.alive) en.y += 1; }); }
@@ -93,15 +95,11 @@ export function startGame({ term, input, flare, surge, onExit, palette }) {
     if (enemies.some((en) => en.alive && en.y >= H - 1)) return end("an enemy reached the line. GAME OVER.");
 
     if (enemies.every((en) => !en.alive) && (!boss || !boss.alive)) {
-      if (wave === 1) {
-        wave = 2;
-        spawnWave(2);
-        flare && flare(1200);
-        surge && surge(700);
-      } else {
-        won = true;
-        return end("BOSS DOWN. both waves cleared. the rain salutes you.");
-      }
+      wave++;
+      score += 10; // wave-clear bonus
+      spawnWave(wave);
+      flare && flare(1200);
+      surge && surge(700);
     }
     render();
   }
@@ -114,7 +112,7 @@ export function startGame({ term, input, flare, surge, onExit, palette }) {
     }
     bullets.forEach((b) => { if (b.y >= 0 && b.y < H) grid[b.y][b.x] = "|"; });
     grid[H - 1][px] = "A";
-    const bossHp = boss && boss.alive ? `  BOSS ${"♥".repeat(boss.hp)}` : "";
+    const bossHp = boss && boss.alive ? `  BOSS ${"♥".repeat(Math.min(12, boss.hp))}` : "";
     const hud = ` WAVE ${wave}   SCORE ${score}${bossHp}    [<- ->] move  [space] fire  [q] quit`;
     paint(term, [hud, ...grid.map((r) => r.join(""))], COLOR);
   }
