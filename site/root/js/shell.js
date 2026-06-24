@@ -337,7 +337,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       "commands: help  whoami  sudo  ls [-a]  cd <dir>  cat <file>  pwd  find <x>  tree",
       "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
       "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
-      "          man <x>  echo <x>  theme <name>  lite  ritual  games  clear  exit",
+      "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  clear  exit",
       "          arcade: galaga  doom  snake  pong  breakout  tetris    ...and more.",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
@@ -704,6 +704,38 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   CMD.unmute = () => CMD.sound({ tokens: ["on"] });
   try { if (localStorage.getItem("cg.sound") === "0" && audio) audio.setEnabled(false); } catch {}
 
+  // --- transmissions: a one-way feed from "us", authored by JSON commits ---
+  let txCache = null;
+  const txRead = () => { try { return new Set(JSON.parse(localStorage.getItem("cg.tx.read") || "[]")); } catch { return new Set(); } };
+  const txMark = (ids) => { try { const s = txRead(); ids.forEach((i) => s.add(i)); localStorage.setItem("cg.tx.read", JSON.stringify([...s])); } catch {} };
+  function txVisible(list) {
+    const now = Date.now();
+    let visits = 0; try { visits = Number(localStorage.getItem("cg.visits") || 0); } catch {}
+    return (list || []).filter((m) => {
+      if (m.show && new Date(m.show).getTime() > now) return false; // scheduled, not yet
+      if (m.minVisits && visits < m.minVisits) return false; // returning-visitor only
+      return true;
+    });
+  }
+  CMD.messages = () => {
+    if (txCache === null) return "tuning in... (try again in a moment.)";
+    const vis = txVisible(txCache);
+    if (!vis.length) return "no transmissions. the silence is also a message.";
+    const seen = txRead();
+    const blocks = vis.map((m) => `— ${m.from || "us"} · ${m.at || ""}${seen.has(m.id) ? "" : "   * NEW"}\n${m.text}`);
+    txMark(vis.map((m) => m.id));
+    return ["── transmissions ──", ...blocks].join("\n\n");
+  };
+  CMD.inbox = () => CMD.messages();
+  CMD.transmissions = () => CMD.messages();
+  CMD.msg = () => CMD.messages();
+  fetch("transmissions.json").then((r) => (r.ok ? r.json() : [])).then((j) => {
+    txCache = Array.isArray(j) ? j : [];
+    const seen = txRead();
+    const unread = txVisible(txCache).filter((m) => !seen.has(m.id)).length;
+    if (unread) println(`» ${unread} new transmission${unread > 1 ? "s" : ""}. type: messages`);
+  }).catch(() => { txCache = []; });
+
   // --- multi-step unlock ritual (flares harder each step) ---
   function startRitual() {
     state.ritual = { idx: 0 };
@@ -808,6 +840,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     su: "SU(1) — su <user> [password]. there's a small cast, each with a thematic password. authenticate one.",
     tunnels: "TUNNELS(7) — 'cd tunnels'. it reshuffles every time you move. you will not map it. that is the point.",
     ping: "PING(8) — pings answer in many voices. none of them helpful.",
+    messages: "MESSAGES(1) — a one-way feed from 'us'. new ones are flagged * NEW. also: inbox, transmissions.",
   };
   CMD.man = (io) => {
     const t = (io.tokens[0] || "").toLowerCase();

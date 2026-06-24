@@ -54,6 +54,7 @@ const SHIPPED = [
   "/root/js/ink.js",
   "/root/js/audio.js",
   "/root/check-in.json",
+  "/root/transmissions.json",
 ];
 
 test.describe("comeandget.us", () => {
@@ -267,6 +268,16 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#term")).toContainText("SCORE");
     expect(await page.locator('#term span[style*="00ff66"]').count()).toBeGreaterThan(0);
     await page.keyboard.press("q");
+  });
+
+  test("the transmissions feed prints and flags unread", async ({ page }) => {
+    await page.goto("/root/");
+    await page.waitForTimeout(300); // let the feed fetch
+    await page.fill("#cmd", "messages");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("transmissions");
+    await expect(page.locator("#term")).toContainText("the channel works");
+    await expect(page.locator("#term")).toContainText("NEW");
   });
 
   test("the tunnels are an explorable shifting maze", async ({ page }) => {
