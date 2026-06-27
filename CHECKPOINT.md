@@ -31,11 +31,14 @@ Full review (branch `claude/comeandget-code-review-gix3gm`). Landed fixes; 32/32
   unauthenticated KV write-flood (`beat`) and the `claim` code brute-force. Combined with the S3
   read cap, both sides of the vigil API are now bounded. (Known free-plan gap: zone rules don't cover
   the `*.pages.dev` alias — real domain is protected; pages.dev direct-hit accepted for now.)
-- **Residual / owner action (NOT code):**
-  - **S7 — SHA-pin Actions.** `deploy.yml` still uses `@v4`/`@v3` tags; SHAs were unresolvable from
-    this network (proxy 403). Inline note has the `git ls-remote …^{}` command to pin later.
-  - Still recommended: set `PUZZLE_ANSWER` repo secret as **comma/newline-separated** (both answers)
-    so the CI guard arms both first-word needles; rotate `CODE_ARG1/2` (compromised per entry below).
+- **S7 — SHA-pin Actions: ✅ DONE.** `deploy.yml` now pins `actions/checkout`, `actions/setup-node`,
+  and `cloudflare/wrangler-action` to immutable commit SHAs (human-readable tag kept in a trailing
+  `# vN` comment, plus a bump note). NB: the GitHub "Pin workflow" UI button is unrelated — it only
+  pins the workflow in the Actions-tab list; this is the actual supply-chain fix.
+- **`PUZZLE_ANSWER` repo secret: ✅ DONE.** Reformatted comma/newline-separated, so the CI leak guard
+  now arms BOTH answers' first-word needles (previously only one segment was covered).
+- **Residual:** rotate `CODE_ARG1/2` — **deferred by owner** until steady state (still compromised per
+  the SECURITY entry below; the live Cloudflare rate-limit rule blunts brute-force in the meantime).
 
 ### 2026-06-27 (SECURITY — leak remediated; history reset) ✅
 - Incident: a prior seat wrote the two access codes AND both puzzle answers as literal values into
