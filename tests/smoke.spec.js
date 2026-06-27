@@ -53,9 +53,45 @@ const SHIPPED = [
   "/root/js/tetris.js",
   "/root/js/ink.js",
   "/root/js/audio.js",
+  "/root/js/vigil.js",
   "/root/check-in.json",
   "/root/transmissions.json",
 ];
+
+// the living/dead oracle, mirrored from functions/api/vigil/_lib.js. A real id
+// decodes to JSON with v===1 and numeric b; a ghost id encodes plaintext and can
+// never satisfy that.
+function b64urlToText(s) {
+  let t = String(s).replace(/-/g, "+").replace(/_/g, "/");
+  while (t.length % 4) t += "=";
+  return Buffer.from(t, "base64").toString("utf8");
+}
+function passesLivingOracle(id) {
+  let obj;
+  try {
+    obj = JSON.parse(b64urlToText(id));
+  } catch {
+    return false;
+  }
+  return !!obj && typeof obj === "object" && !Array.isArray(obj) && obj.v === 1 && typeof obj.b === "number";
+}
+function mintRealId() {
+  const payload = { v: 1, b: Math.floor(Date.now() / 1000), n: "test" + Math.random().toString(36).slice(2), t: 0 };
+  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// read a local test code out of .dev.vars (gitignored) when not provided via env
+function readDevVar(key) {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const raw = readFileSync(join(here, "..", ".dev.vars"), "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(line);
+      if (m && m[1] === key) return m[2].replace(/^["']|["']$/g, "");
+    }
+  } catch {}
+  return "";
+}
 
 test.describe("comeandget.us", () => {
   test("the door loads without errors", async ({ page }) => {
@@ -272,7 +308,9 @@ test.describe("comeandget.us", () => {
 
   test("the transmissions feed prints and flags unread", async ({ page }) => {
     await page.goto("/root/");
-    await page.waitForTimeout(300); // let the feed fetch
+    // wait for the feed to actually load (it announces itself) rather than a
+    // fixed timeout — wrangler's first static fetch can be slower than http-server
+    await expect(page.locator("#term")).toContainText("new transmission", { timeout: 10000 });
     await page.fill("#cmd", "messages");
     await page.press("#cmd", "Enter");
     await expect(page.locator("#term")).toContainText("transmissions");
@@ -350,5 +388,121 @@ test.describe("comeandget.us", () => {
     await page.waitForTimeout(200);
     const ember = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--ember").trim());
     expect(ember.toLowerCase()).toBe("#00ff66");
+  });
+
+  // --- the vigil: presence on /root/ (Cloudflare Functions + simulated KV) ---
+
+  test("the roster returns and never leaks an answer", async ({ page }) => {
+    await page.goto("/root/");
+    const res = await page.request.get("/api/vigil");
+    expect(res.ok(), "GET /api/vigil should succeed").toBeTruthy();
+    const data = await res.json();
+    expect(Array.isArray(data.roster)).toBeTruthy();
+    expect(typeof data.n).toBe("number");
+    const text = JSON.stringify(data).toLowerCase();
+    for (const n of NEEDLES) expect(text, `roster leaks "${n}"`).not.toContain(n);
+  });
+
+  test("proof of life: a seeded real id decodes, a ghost id does not", async ({ page }) => {
+    await page.goto("/root/");
+    const realId = mintRealId();
+
+    // seed a real presence via beat (tier 0, no token needed)
+    const beatRes = await page.request.post("/api/vigil/beat", { data: { id: realId } });
+    expect(beatRes.ok(), "POST /api/vigil/beat should succeed").toBeTruthy();
+    const beat = await beatRes.json();
+    expect(Array.isArray(beat.roster)).toBeTruthy();
+
+    // the real id we seeded must pass the clean-payload oracle
+    expect(passesLivingOracle(realId), "the seeded real id must decode to a {v:1} payload").toBeTruthy();
+    const mine = beat.roster.find((p) => p.id === realId);
+    expect(mine, "the seeded real presence should appear in the returned roster").toBeTruthy();
+    expect(passesLivingOracle(mine.id), "the real id in the roster must pass the living oracle").toBeTruthy();
+
+    // at least one returned ghost id must FAIL the oracle (guaranteed dead tell)
+    const ghosts = beat.roster.filter((p) => !passesLivingOracle(p.id));
+    expect(ghosts.length, "the roster must contain at least one undecodable ghost id").toBeGreaterThan(0);
+    for (const g of ghosts) {
+      expect(passesLivingOracle(g.id), `ghost id "${g.id}" must NOT decode to a {v:1} payload`).toBeFalsy();
+    }
+
+    // no needle in any beat response
+    const text = JSON.stringify(beat).toLowerCase();
+    for (const n of NEEDLES) expect(text, `beat leaks "${n}"`).not.toContain(n);
+  });
+
+  test("claim accepts a valid local code and rejects a wrong one", async ({ page }) => {
+    const code = process.env.CODE_ARG1 || readDevVar("CODE_ARG1");
+    test.skip(!code, "set CODE_ARG1 in .dev.vars or env to exercise claim");
+
+    await page.goto("/root/");
+
+    const okRes = await page.request.post("/api/vigil/claim", { data: { code } });
+    expect(okRes.ok()).toBeTruthy();
+    const ok = await okRes.json();
+    expect(ok.ok, "a valid code should be accepted").toBe(true);
+    expect(typeof ok.tier).toBe("number");
+    expect(typeof ok.token).toBe("string");
+    expect(ok.token.length).toBeGreaterThan(0);
+
+    const badRes = await page.request.post("/api/vigil/claim", { data: { code: "definitely-not-the-code" } });
+    const bad = await badRes.json();
+    expect(bad.ok, "a wrong code must be rejected").toBe(false);
+
+    for (const n of NEEDLES) {
+      expect(JSON.stringify(ok).toLowerCase(), `claim leaks "${n}"`).not.toContain(n);
+      expect(JSON.stringify(bad).toLowerCase(), `claim leaks "${n}"`).not.toContain(n);
+    }
+  });
+
+  test("name sanitization rejects needles and markup (server-side)", async ({ page }) => {
+    const code = process.env.CODE_ARG1 || readDevVar("CODE_ARG1");
+    test.skip(!code, "set CODE_ARG1 in .dev.vars or env to exercise name");
+    test.skip(!NEEDLES.length, "set PUZZLE_ANSWER or secret/answer.txt to exercise needle rejection");
+
+    await page.goto("/root/");
+
+    // earn a valid token so a name would otherwise be accepted
+    const claimRes = await page.request.post("/api/vigil/claim", { data: { code } });
+    const claim = await claimRes.json();
+    expect(claim.ok).toBe(true);
+    const token = claim.token;
+
+    const realId = mintRealId();
+
+    // a needle name must be dropped by the server (never reflected into the roster)
+    const needle = NEEDLES[0];
+    const needleBeat = await (
+      await page.request.post("/api/vigil/beat", { data: { id: realId, name: needle, token } })
+    ).json();
+    const needleEntry = needleBeat.roster.find((p) => p.id === realId);
+    expect(needleEntry, "the seeded presence should be in the roster").toBeTruthy();
+    expect(needleEntry.name, "a needle name must be dropped").toBeFalsy();
+    for (const n of NEEDLES) {
+      expect(JSON.stringify(needleBeat).toLowerCase(), `beat reflects needle "${n}"`).not.toContain(n);
+    }
+
+    // markup must be dropped too (allowlist; no raw markup into a payload)
+    const markupBeat = await (
+      await page.request.post("/api/vigil/beat", { data: { id: realId, name: "<b>x</b>", token } })
+    ).json();
+    const markupEntry = markupBeat.roster.find((p) => p.id === realId);
+    expect(markupEntry.name, "a markup name must be dropped").toBeFalsy();
+    expect(JSON.stringify(markupBeat)).not.toContain("<b>");
+
+    // a clean name IS accepted and rides the roster
+    const cleanBeat = await (
+      await page.request.post("/api/vigil/beat", { data: { id: realId, name: "ahool42", token } })
+    ).json();
+    const cleanEntry = cleanBeat.roster.find((p) => p.id === realId);
+    expect(cleanEntry.name).toBe("ahool42");
+
+    // and the terminal `claim`/`name` path works end to end with a clean name
+    await page.fill("#cmd", "claim " + code);
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("the gate remembers you", { timeout: 5000 });
+    await page.fill("#cmd", "name ahool42");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("ahool42");
   });
 });

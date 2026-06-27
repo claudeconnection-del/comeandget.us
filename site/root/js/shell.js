@@ -12,7 +12,7 @@ import { startBreakout } from "./breakout.js";
 import { startTetris } from "./tetris.js";
 import { shade, lighten } from "./ink.js";
 
-export function initTerminal({ term, input, form, decode, flare, setPalette, setLite, audio }) {
+export function initTerminal({ term, input, form, decode, flare, setPalette, setLite, audio, vigil }) {
   function println(text = "") {
     term.appendChild(document.createTextNode((Array.isArray(text) ? text.join("\n") : text) + "\n"));
     // bound scrollback so a very long session can't grow the DOM forever
@@ -338,6 +338,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
       "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
       "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  clear  exit",
+      "          present (others)  claim <code>  name <newname>",
       "          arcade: galaga  doom  snake  pong  breakout  tetris    ...and more.",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
@@ -736,6 +737,58 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     if (unread) println(`» ${unread} new transmission${unread > 1 ? "s" : ""}. type: messages`);
   }).catch(() => { txCache = []; });
 
+  // --- the vigil: presence in /root/ ----------------------------------------
+  // present/others render the roster; claim unlocks naming; name sets it.
+  // These talk to the passed-in vigil module; ghosts and reals look identical by
+  // label — you must `decode <id>` to tell the living from the dead.
+  const tierGlyph = (t) => (t === 1 ? "✦" : t === 2 ? "✧" : "·");
+  function renderRoster(list) {
+    if (!Array.isArray(list) || !list.length) {
+      println("the room is quiet. or it's hiding from you.");
+      return;
+    }
+    const lines = ["── present ──"];
+    for (const p of list) {
+      const label = p.name ? `${p.handle} (${p.name})` : p.handle;
+      lines.push(`  ${tierGlyph(p.tier)} ${label}`);
+    }
+    lines.push("");
+    lines.push("they all look alike from here. decode an id to tell the living from the dead.");
+    println(lines.join("\n"));
+  }
+  CMD.present = () => {
+    if (!vigil) return "no one answers. the vigil is dark.";
+    Promise.resolve(vigil.roster())
+      .then((list) => renderRoster(list))
+      .catch(() => println("the vigil flickers, then nothing."));
+    return "listening...";
+  };
+  CMD.others = () => CMD.present();
+  CMD.claim = (io) => {
+    if (!vigil) return "nothing to claim. the vigil is dark.";
+    const code = (io.rest || "").trim();
+    if (!code) return "usage: claim <code>   (the code rides in your reply from 'help')";
+    Promise.resolve(vigil.claim(code))
+      .then((r) => {
+        if (r && r.ok) {
+          surge(400);
+          println(`the gate remembers you. (${r.tier === 2 ? "tech" : "cryptid"}.)  now: name <yourname>`);
+        } else {
+          println(r && r.reason ? r.reason : "that code means nothing here. the gate stays shut.");
+        }
+      })
+      .catch(() => println("the gate did not answer."));
+    return "knocking...";
+  };
+  CMD.name = (io) => {
+    if (!vigil) return "no name to set. the vigil is dark.";
+    const n = (io.rest || "").trim();
+    if (!n) return "usage: name <newname>   (claim a code first)";
+    const r = vigil.setName(n);
+    if (r && r.ok) { surge(300); return `you are '${r.name}' now. the others can see it.`; }
+    return r && r.reason ? r.reason : "that name won't take.";
+  };
+
   // --- multi-step unlock ritual (flares harder each step) ---
   function startRitual() {
     state.ritual = { idx: 0 };
@@ -911,5 +964,14 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
 
   term.addEventListener("click", () => { if (!state.gaming) input.focus(); });
 
-  return { println };
+  // run a command as if typed (echoes the prompt + prints the result). Used by
+  // the vigil corner tap so a keyboard-less visitor can open the roster.
+  function exec(line) {
+    if (state.gaming || state.ritual) return;
+    println("PS C:\\> " + line);
+    const res = run(line);
+    if (res) println(res);
+  }
+
+  return { println, run: exec };
 }

@@ -7,6 +7,18 @@ at every feature-implementation change, at every spec update, and before pushing
 
 ## Checkpoint log (newest first)
 
+### 2026-06-27 (later) — Presence Functions + vigil client landed & verified GREEN
+- Restored the presence implementation onto this branch (from the earlier seat's WIP):
+  `functions/api/vigil/{_lib,index,beat,claim}.js`, `site/root/js/vigil.js`, the corner display +
+  terminal wiring (`site/root/{index.html,ember.css,js/agent.js,js/shell.js}`), the extended leak
+  guard + presence tests (`tests/smoke.spec.js`), and the local toolchain (`package.json` wrangler
+  devDep, `playwright.config.js` → `wrangler pages dev`).
+- Kept this branch's canonical deploy wiring untouched (`wrangler.toml` real KV id, `deploy.yml`, `.gitignore`).
+- **Local verify GREEN: 31/31 Playwright smoke pass** via `wrangler pages dev` — incl. the leak guard
+  (answers never ship; `SHIPPED` now lists `/root/js/vigil.js`), proof-of-life (real id decodes, ghost
+  id does not), claim accept/reject, server-side name sanitization. `npm run validate` clean.
+- Blocker from the previous entry is **cleared**. Remaining: deploy + Pages secrets + Proton + DNS.
+
 ### 2026-06-27 — Cloudflare deploy path wired; Functions still pending
 - Wired the GitHub-Pages → Cloudflare-Pages deploy for the presence ("vigil") feature
   (commit `4f4f8f6`): `wrangler.toml`, `deploy.yml` swap, `.gitignore`.
@@ -46,16 +58,18 @@ dashboard "Connect to Git" flow.
 - ✅ GitHub repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
 - ✅ KV namespace `PRESENCE` created (id above).
 
-## ⛔ Outstanding blocker
-`functions/` (Pages Functions) and the vigil client JS are **not in the repo**. Until they land,
-a deploy publishes the static site only — the presence endpoints won't exist. **Get these from the
-user and commit `functions/` at repo root, next to `wrangler.toml`.**
+## ✅ Blocker cleared
+`functions/` + the vigil client are committed on this branch and verified locally (31/31 smoke via
+`wrangler pages dev`). What remains is deploy → Pages secrets → Proton → DNS (Next steps).
 
 ## Next steps (ordered)
-1. Land `functions/` (+ vigil client under `site/js/`); extend the Playwright smoke to exercise
-   Functions via `wrangler pages dev` if needed.
-2. After the first deploy creates `comeandget-us`, set Pages project env secrets `CODE_ARG1` /
-   `CODE_ARG2` (the two access codes — NOT the puzzle answers). Mirror in local `.dev.vars`.
+1. ✅ DONE — `functions/api/vigil/*` + `site/root/js/vigil.js` landed; smoke extended & green (31/31).
+   Open a PR → merge to `main` to run the gated `wrangler pages deploy` (first run should auto-create
+   `comeandget-us`). If CI can't auto-create non-interactively, create a **Direct Upload** Pages
+   project named `comeandget-us` once (dashboard) or `wrangler pages project create comeandget-us`.
+2. After the project exists, set Pages **env secrets**: `CODE_ARG1`, `CODE_ARG2` (the two access codes
+   — NOT the puzzle answers) **and `SIGN_KEY`** (random; signs the tier token — `claim` returns
+   `ok:false` without it). Already mirrored locally in `.dev.vars`.
 3. Proton sieve — append the matching code to each of the two "solved" auto-replies.
 4. **DNS cutover (last):** point `comeandget.us` at Cloudflare Pages once `*.pages.dev` is verified.
    No outage before this — GitHub Pages keeps serving until the flip.
@@ -70,4 +84,4 @@ user and commit `functions/` at repo root, next to `wrangler.toml`.**
 ## Key IDs / secrets status (names only — never values)
 - KV `PRESENCE` id `1cd08bd52a3049a5ba07372a5466b01d` (committed in `wrangler.toml`; not secret).
 - GitHub repo secrets: `CLOUDFLARE_API_TOKEN` ✅, `CLOUDFLARE_ACCOUNT_ID` ✅, `PUZZLE_ANSWER` (optional CI leak guard).
-- Cloudflare Pages project secrets: `CODE_ARG1` ⬜, `CODE_ARG2` ⬜ (set after first deploy).
+- Cloudflare Pages project secrets: `CODE_ARG1` ⬜, `CODE_ARG2` ⬜, `SIGN_KEY` ⬜ (set after first deploy; `SIGN_KEY` is REQUIRED — `claim` returns `ok:false` without it).

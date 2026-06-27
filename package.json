@@ -5,7 +5,7 @@
   "description": "A static cryptographic ARG landing page for comeandget.us",
   "type": "module",
   "scripts": {
-    "dev": "http-server site -p 4173 -c-1 -s",
+    "dev": "wrangler pages dev",
     "validate": "html-validate \"site/**/*.html\"",
     "test": "playwright test",
     "ci": "npm run validate && npm test"
@@ -13,6 +13,7 @@
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "html-validate": "^9.5.3",
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "wrangler": "^3.99.0"
   }
 }

@@ -16,9 +16,11 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: {
-    command: `npx http-server site -p ${PORT} -c-1 -s`,
+    // exercise the real Functions + a locally simulated PRESENCE KV. Argument-free
+    // and config-driven: wrangler.toml supplies the directory + bindings.
+    command: `npx wrangler pages dev --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
-    timeout: 30000,
+    timeout: 120000,
   },
 });

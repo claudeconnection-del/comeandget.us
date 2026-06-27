@@ -1,6 +1,7 @@
 import { createRain } from "./rain.js";
 import { initTerminal } from "./shell.js";
 import { createAudio } from "./audio.js";
+import { createVigil } from "./vigil.js";
 
 const rain = createRain(document.getElementById("rain"));
 const audio = createAudio();
@@ -37,8 +38,19 @@ function decodeToText(s) {
   }
 }
 
+// The vigil: presence for /root/. Owns identity, the heartbeat, and the ghosted
+// corner display. The corner's tap runs the `present` terminal command, so it
+// forwards through a holder that the terminal fills in once it exists.
+let runPresent = () => {};
+const vigil = createVigil({
+  flare: rain.flare,
+  audio,
+  mount: document.getElementById("vigil"),
+  present: () => runPresent(),
+});
+
 // The interactive faux terminal.
-const { println } = initTerminal({
+const { println, run } = initTerminal({
   term: document.getElementById("term"),
   input: document.getElementById("cmd"),
   form: document.getElementById("cmdline"),
@@ -47,7 +59,9 @@ const { println } = initTerminal({
   setPalette: rain.setPalette,
   setLite: rain.setLite,
   audio,
+  vigil,
 });
+runPresent = () => run("present");
 
 // A breadcrumb for the Application tab (a Graph scope, base64).
 try {
