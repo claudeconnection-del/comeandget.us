@@ -1,0 +1,63 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: validate & smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Validate HTML
+        run: npm run validate
+      - name: Install Playwright (chromium)
+        run: npx playwright install --with-deps chromium
+      - name: Smoke test the puzzle
+        run: npm test
+        env:
+          # Optional: set a repo secret named PUZZLE_ANSWER to enforce the
+          # "answer never ships" guard in CI. If unset, that one check skips.
+          PUZZLE_ANSWER: ${{ secrets.PUZZLE_ANSWER }}
+
+  deploy:
+    name: deploy to cloudflare pages
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Cloudflare Pages
+        # Argument-free `pages deploy`: wrangler.toml decides the directory,
+        # project name, and the PRESENCE KV binding. Uses the action's bundled
+        # wrangler (recent enough for pages_build_output_dir — an ancient
+        # wrangler is what trips "problem parsing the Wrangler configuration
+        # file").
+        #
+        # NOTE: `wrangler pages deploy` does NOT auto-create a project — it errors
+        # "Project not found". So create it first, idempotently: the `||` makes the
+        # create a no-op once the project exists. Pinned wrangler is recent enough
+        # for pages_build_output_dir.
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "3.114.0"
+          preCommands: |
+            npx wrangler pages project create comeandget-us --production-branch=main || echo "project comeandget-us already exists — continuing"
+          command: pages deploy --commit-dirty=true

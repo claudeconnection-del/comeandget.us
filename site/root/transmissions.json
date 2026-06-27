@@ -1,0 +1,27 @@
+[
+  {
+    "id": "t001",
+    "from": "us",
+    "at": "day zero",
+    "text": "if you're reading this, the channel works. we'll use it."
+  },
+  {
+    "id": "t002",
+    "from": "us",
+    "at": "day zero",
+    "text": "the rabbit was real. the tunnels are not. the prize is still an email."
+  },
+  {
+    "id": "t003",
+    "from": "us",
+    "at": "for the regulars",
+    "minVisits": 3,
+    "text": "three times now. you keep coming back. that makes you almost one of us."
+  },
+  {
+    "id": "t004",
+    "from": "help",
+    "show": "2099-01-01",
+    "text": "(a scheduled transmission — stays hidden until its 'show' date, then arrives on its own.)"
+  }
+]

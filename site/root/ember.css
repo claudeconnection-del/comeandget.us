@@ -1,0 +1,246 @@
+:root {
+  --bg: #060402;
+  --ember: #ff7a18;
+  --ember-dim: #7a3a0c;
+  --ash: #c9a98a;
+  --spark: #ffd27a;
+  --term-fg: #f4ecdd;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--ash);
+  font-family: var(--mono);
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  cursor: crosshair;
+}
+
+#rain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+}
+
+/* vignette + heat haze so text stays legible over the rain */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(6,4,2,0.55) 30%, rgba(6,4,2,0.86) 100%);
+}
+
+main {
+  position: relative;
+  z-index: 2;
+  width: min(92vw, 760px);
+  padding: 1.4rem 1.6rem;
+  /* a console panel that dims the fire behind the text for legibility */
+  background: rgba(5, 3, 2, 0.68);
+  border: 1px solid color-mix(in srgb, var(--ember) 18%, transparent);
+  border-radius: 8px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: 0 0 44px rgba(0, 0, 0, 0.6);
+}
+/* a living, themed border that breathes — and surges on events */
+main::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid var(--ember);
+  opacity: 0.06;
+  pointer-events: none;
+  animation: borderpulse 4.5s ease-in-out infinite;
+}
+main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
+@keyframes borderpulse { 0%, 100% { opacity: 0.05; } 50% { opacity: 0.26; } }
+
+.term {
+  font-size: clamp(0.8rem, 2.2vw, 1.05rem);
+  line-height: 1.7;
+  color: var(--term-fg); /* light, themed — high contrast against the fire */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 48vh;
+  overflow-y: auto;
+}
+.term .muted { color: var(--ash); }
+/* while the arcade is running, show the whole playfield, no wrap/scroll */
+.term.gaming { max-height: none; overflow: hidden; white-space: pre; line-height: 1.2; }
+
+/* interactive prompt */
+.cmdline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5ch;
+  margin-top: 0.3rem;
+  font-size: clamp(0.8rem, 2.2vw, 1.05rem);
+}
+.cmdline .ps {
+  color: var(--ember);
+  text-shadow: 0 0 10px rgba(255, 122, 24, 0.35);
+  white-space: nowrap;
+}
+.cmdline input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font: inherit;
+  color: var(--spark);
+  caret-color: var(--spark);
+  text-shadow: 0 0 8px rgba(255, 210, 122, 0.3);
+}
+
+.noscript {
+  position: relative;
+  z-index: 2;
+  color: var(--ember);
+  text-align: center;
+  padding: 2rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* the vigil: an always-on presence readout — a vertical stack of chips, one per
+   presence. it DOCKS INTO THE GUTTER beside the centered console (#vigil's left
+   edge is pinned just outside main's right edge) so it can never sit on top of
+   the terminal, and it rides ABOVE the console in the stacking order so it's
+   never trapped behind. on windows with no gutter it collapses and clips away
+   (see the narrow-screen rail below). click a chip to decode it. */
+#vigil {
+  position: fixed;
+  z-index: 30;                 /* above the console panel (z-index 2): never behind */
+  left: calc(50% + min(92vw, 760px) / 2 + 0.5rem); /* just outside main's right edge */
+  right: 0.35rem;              /* clamp to the viewport; box width = the gutter */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.28rem;
+  max-height: 92vh;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: clamp(0.62rem, 1.4vw, 0.78rem);
+  pointer-events: none; /* only the chips are interactive */
+}
+#vigil:empty { display: none; }
+
+.vigil-chip {
+  pointer-events: auto;
+  display: block;
+  max-width: 100%;             /* never wider than the gutter — can't bleed onto main */
+  margin: 0;
+  padding: 0.16rem 0.55rem;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--spark, #ffd27a);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid color-mix(in srgb, var(--ember, #ff7a18) 35%, transparent);
+  border-radius: 999px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  opacity: 0.66;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  line-height: 1.3;
+  transition: opacity 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+.vigil-chip:hover, .vigil-chip:focus {
+  opacity: 0.98;
+  outline: none;
+  color: var(--ember, #ff7a18);
+  border-color: color-mix(in srgb, var(--ember, #ff7a18) 80%, transparent);
+}
+.vigil-quiet, .vigil-more {
+  pointer-events: none;
+  cursor: default;
+  color: var(--ash, #7a3a0c);
+  background: transparent;
+  border-color: transparent;
+  opacity: 0.5;
+}
+
+/* a ghost surfaces somewhere off-grid, then fades. it rides BEHIND the console
+   (z-index 1, under main's z-index 2) so it can drift across the screen — even
+   past the panel — without ever covering the terminal text. */
+#vigil-drift {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.vigil-drift-chip {
+  position: absolute;
+  font-family: var(--mono);
+  font-size: clamp(0.6rem, 1.5vw, 0.76rem);
+  color: var(--ash, #7a3a0c);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  opacity: 0;
+  animation: vigildrift 7s ease-in-out forwards;
+}
+@keyframes vigildrift {
+  0% { opacity: 0; transform: translateY(6px); }
+  18% { opacity: 0.5; }
+  78% { opacity: 0.42; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* narrow screens have no side gutter to dock into. reserve a thin top rail above
+   the centered console and lay the chips along it — never over the console body,
+   never over the bottom input row. */
+@media (max-width: 1024px) {
+  body { padding-top: 2.3rem; }
+  #vigil {
+    left: auto;
+    right: 0.4rem;
+    top: 0.35rem;
+    transform: none;
+    flex-direction: row-reverse; /* newest at the right edge, older trail left */
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.3rem;
+    max-width: calc(100vw - 0.8rem);
+    max-height: 1.9rem;
+  }
+  .vigil-chip { font-size: 0.64rem; max-width: 42vw; }
+}
+
+@keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor { animation: none; }
+  main::before { animation: none; opacity: 0.14; }
+  .vigil-chip { transition: none; }
+  #vigil-drift { display: none; }
+}

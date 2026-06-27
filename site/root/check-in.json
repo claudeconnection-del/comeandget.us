@@ -1,0 +1,17 @@
+{
+  "schema": "intune.deviceCheckin/v2",
+  "deviceName": "NEO-WS01",
+  "entraDeviceId": "7f3a1c20-9b4e-4c2a-bf21-0d11e9a7c655",
+  "joinType": "Entra joined",
+  "managedBy": "Intune (MDM)",
+  "ownership": "Corporate",
+  "complianceState": "noncompliant",
+  "osVersion": "Windows 11 Pro 23H2 (22631.4317)",
+  "lastSync": "1970-01-01T00:00:00Z",
+  "userPrincipalName": "neo@comeandget.onmicrosoft.com",
+  "assignedRoles": ["Global Administrator"],
+  "tenantId": "00000000-0000-0000-0000-000000000000",
+  "notes": "token replay observed from a new location. do not revoke. observe.",
+  "motd": "ZGVjb2RlIHRoZSBfdG9rZW4gKGVudHJhIGFjY2VzcyB0b2tlbikuIG1pbmQgdGhlIGFsZy4gdGhlbiBhbnN3ZXIgdGhlIHJpZGRsZS4=",
+  "_token": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC8wMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAvIiwiYXVkIjoiaHR0cHM6Ly9ncmFwaC5taWNyb3NvZnQuY29tIiwiYXBwaWQiOiIxYjczMDk1NC0xNjg1LTRiNzQtOWJmZC1kYWMyMjRhN2I4OTQiLCJzY3AiOiJEaXJlY3RvcnkuUmVhZFdyaXRlLkFsbCIsInJvbGVzIjpbIkdsb2JhbCBBZG1pbmlzdHJhdG9yIl0sIm5vdGUiOiJhbGc6bm9uZSDigJQgd2UgZGlkIG5vdCBzaWduIHRoaXMsIGFuZCBub2JvZHkgY2hlY2tlZCIsIm5leHQiOiJvbmUgbW9yZSBzZWNyZXQgaXMgcHVibGlzaGVkIGluIEROUy4gZGlnIFRYVCBfcmFiYml0LmNvbWVhbmRnZXQudXMiLCJzdWJtaXQiOiJkZWNvZGUgdGhlIHJlY29yZCwgdGhlbiBhbnN3ZXIgdGhlIHJpZGRsZSBpbiB0aGUgc3ViamVjdCBsaW5lIHRvIHBsZWFzZUBjb21lYW5kZ2V0LnVzIn0."
+}

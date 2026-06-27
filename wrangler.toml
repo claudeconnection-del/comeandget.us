@@ -1,0 +1,20 @@
+# Cloudflare Pages config — the single source of truth for the deploy.
+#
+# Static assets are served from site/. Functions are compiled from the
+# repo-root functions/ directory (config-driven convention: functions/ sits
+# next to this file, NOT inside site/, so it is never downloadable as an asset).
+#
+# Both `wrangler pages dev` and `wrangler pages deploy` are run ARGUMENT-FREE so
+# this file alone decides the directory, bindings, and project name. Never pass a
+# positional directory — it conflicts with pages_build_output_dir.
+
+name = "comeandget-us"
+pages_build_output_dir = "site"
+compatibility_date = "2024-12-01"
+
+# Shared, live presence state. The KV namespace named PRESENCE has been created
+# in Cloudflare and its id is set below. `wrangler pages dev` simulates this
+# binding locally from just the binding name, so no real id is needed for dev.
+[[kv_namespaces]]
+binding = "PRESENCE"
+id = "1cd08bd52a3049a5ba07372a5466b01d"
