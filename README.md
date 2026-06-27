@@ -31,37 +31,44 @@ all stay out. Only a ciphertext and a one-way hash of the key ever ship. The
 page decrypts live, in the browser, when someone supplies the right name.
 
 ```
-site/                 # everything that crosses the threshold (deployed)
-  index.html
-  styles.css
+site/                   # everything that crosses the threshold (deployed)
+  index.html            # the front door (ARG 1: the seven + the winged one)
+  veil.css  favicon.svg
+  _headers              # Content-Security-Policy + security headers
   js/
-    main.js           # wakes the registry of secrets
-    crypto.js         # vigenere + sha256, algorithm only — no answers
-    registry.js       # the shared stage handed to every secret
-    secrets/*.js      # one isolated mechanic each
-  CNAME               # the true name of this place
-tests/smoke.spec.js   # proves the door works and leaks nothing (never deployed)
-secret/               # gitignored; the answer lives here, never in the repo
-.github/workflows/    # what raises the dead on every push
+    wake.js             # boots the stage, schedules the feign then the wake
+    glyphs.js           # vigenere + sha256, algorithm only — no answers
+    stage.js            # the shared stage handed to every "whisper"
+    whispers/*.js       # one isolated mechanic each (threshold.js = the gate)
+  root/                 # the rabbit hole (ARG 2: an M365/Intune honeypot)
+    index.html  ember.css  js/*.js  check-in.json  transmissions.json
+  CNAME                 # the true name of this place
+functions/api/vigil/    # Cloudflare Pages Functions: live presence ("vigil") + KV
+tests/smoke.spec.js     # proves the door works and leaks nothing (never deployed)
+secret/                 # gitignored; the answer lives here, never in the repo
+.github/workflows/      # what raises the dead on every push
 ```
 
 ### wake it locally
 
 ```bash
 npm install
-npm run dev          # serves site/ at http://localhost:4173
+npm run dev          # wrangler pages dev — serves site/ + functions/ locally
 ```
 
 ### what happens on every push
 
 `.github/workflows/deploy.yml`:
 
-1. **ci** — `npm run validate` (HTML) + `npm test` (Playwright): the page loads,
-   a hidden being answers, the true key unseals the sigil and constructs the
-   mailbox, and — if a `PUZZLE_ANSWER` secret is configured — nothing shipped
-   contains the final answer.
-2. **deploy** — only on `main`, only if `ci` is green: publishes `site/` to
-   GitHub Pages with the built-in `GITHUB_TOKEN`. No secrets are stored to ship.
+1. **ci** — `npm run validate` (HTML) + `npm test` (Playwright, via
+   `wrangler pages dev`): the page loads, a hidden being answers, the true key
+   unseals the sigil and constructs the mailbox, the vigil API serves a roster
+   without leaking, and — if a `PUZZLE_ANSWER` secret is configured — nothing in
+   any shipped *or* tracked file contains a final answer.
+2. **deploy** — only on `main`, only if `ci` is green: runs argument-free
+   `wrangler pages deploy` (so `wrangler.toml` alone decides directory, project,
+   and the `PRESENCE` KV binding) to **Cloudflare Pages**, authed with
+   `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`. No puzzle answer ever ships.
 
 ```bash
 npm run ci           # run the whole gate yourself
@@ -76,9 +83,10 @@ single check politely skips.
 
 ### the true name (custom domain)
 
-`site/CNAME` pins `comeandget.us`. DNS points the apex at GitHub Pages
-(A `185.199.108–111.153`, AAAA `2606:50c0:8000–8003::153`) and `www` at
-`claudeconnection-del.github.io`. Enforce HTTPS once the certificate is issued.
+`site/CNAME` pins `comeandget.us`. The zone lives on Cloudflare: add the apex
+(and `www`) under **Custom domains** in the `comeandget-us` Pages project and
+Cloudflare auto-wires the records (apex CNAME-flattened to `*.pages.dev`) and
+issues the certificate. HTTPS is enforced by Pages once the cert is live.
 
 ---
 

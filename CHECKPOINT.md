@@ -7,6 +7,39 @@ at every feature-implementation change, at every spec update, and before pushing
 
 ## Checkpoint log (newest first)
 
+### 2026-06-27 (code review — perf/security/secrets hardening) ✅
+Full review (branch `claude/comeandget-code-review-gix3gm`). Landed fixes; 32/32 smoke green
+(28 pass + 4 secret-gated, all 32 green with local `.dev.vars` + `PUZZLE_ANSWER`).
+- **S1 (secrets):** `_lib.js` had stored both answers' first words as char-code arrays — decodable
+  from public source and invisible to the string-only leak guard. Replaced with **SHA-256 digests**
+  (same one-way pattern as `threshold.js`); the sanitizer now hashes same-length substrings to reject
+  a name. `git grep` confirms neither word appears in any tracked file. (Hashing chosen over env-
+  injection so rejection never silently breaks; dictionary-attack caveat = same as the gate key.)
+- **S3 (perf+abuse):** roster read was an unbounded N+1 (`KV.list` then a `get` per key, full roster
+  to every client). Now the displayable record rides in **`KV.put` metadata**, so `readReals` builds
+  from the single `list` (legacy entries still fall back to `get`), capped at `MAX_REALS=50`.
+- **S6:** `KV.put` wrapped in try/catch; id cap tightened 512→500 so `p:<id>` stays under KV's
+  512-byte key limit.
+- **S5:** added `site/_headers` — CSP (`script-src 'self'`, `style-src 'self' 'unsafe-inline'` for the
+  arcade's inline-style spans), nosniff, Referrer-Policy, frame-ancestors/X-Frame-Options, COOP,
+  Permissions-Policy. Verified the front door + /root still load with **zero console errors**.
+- **P2:** `lures.js` cached hotspot centres (was `getBoundingClientRect` per hotspot per pointermove).
+- **Q2:** README rewritten to match reality (Cloudflare Pages + real file tree); removed unused
+  `http-server` devDep (lock regenerated in sync).
+- **S2/S4 — rate limiting: ✅ DONE (owner, Cloudflare dashboard).** A Cloudflare **Rate Limiting
+  rule on `/api/vigil/*`** is now configured, capping per-IP request rate — closing the
+  unauthenticated KV write-flood (`beat`) and the `claim` code brute-force. Combined with the S3
+  read cap, both sides of the vigil API are now bounded. (Known free-plan gap: zone rules don't cover
+  the `*.pages.dev` alias — real domain is protected; pages.dev direct-hit accepted for now.)
+- **S7 — SHA-pin Actions: ✅ DONE.** `deploy.yml` now pins `actions/checkout`, `actions/setup-node`,
+  and `cloudflare/wrangler-action` to immutable commit SHAs (human-readable tag kept in a trailing
+  `# vN` comment, plus a bump note). NB: the GitHub "Pin workflow" UI button is unrelated — it only
+  pins the workflow in the Actions-tab list; this is the actual supply-chain fix.
+- **`PUZZLE_ANSWER` repo secret: ✅ DONE.** Reformatted comma/newline-separated, so the CI leak guard
+  now arms BOTH answers' first-word needles (previously only one segment was covered).
+- **Residual:** rotate `CODE_ARG1/2` — **deferred by owner** until steady state (still compromised per
+  the SECURITY entry below; the live Cloudflare rate-limit rule blunts brute-force in the meantime).
+
 ### 2026-06-27 (DNS LIVE) — comeandget.us cut over to Cloudflare Pages ✅
 - Apex `https://comeandget.us/` → 200 with a valid TLS cert; `www` → 301 → apex. `/api/vigil` returns
   a live roster (ghosts + a real proof-of-life presence) and `claim` responds — Functions + KV are

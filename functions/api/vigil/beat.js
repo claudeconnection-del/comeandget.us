@@ -20,6 +20,13 @@ import { buildRoster } from "./index.js";
 // expiry, so one continuously-open tab writes ~once per ~8min (~180/day) — well
 // under the free-tier ~1000 writes/day cap, even with several concurrent viewers.
 // (Reads are cheap and the roster is "eventually consistent" anyway.)
+//
+// ABUSE NOTE: the id is client-chosen, so a malicious caller can mint unlimited
+// unique ids and force a KV write per request. The roster read is now bounded
+// (MAX_REALS in index.js), but the WRITE rate is best capped at the edge — add a
+// Cloudflare **Rate Limiting** rule on `/api/vigil/*` (per-IP). That is cheaper
+// and more correct than a KV-counter here, which would itself add a write per
+// request (defeating the purpose) and can't protect the daily quota anyway.
 const TTL_SECONDS = 600;
 const REPUT_WINDOW = 120; // re-put when within this many seconds of expiry
 
@@ -44,7 +51,7 @@ export async function onRequestPost({ request, env }) {
   // verify tier from a signed token (the only way to earn tier 1/2 + a name)
   let tier = 0;
   if (body.token) tier = await verifyTier(env && env.SIGN_KEY, body.token);
-  const name = tier > 0 ? sanitizeName(body.name) : null;
+  const name = tier > 0 ? await sanitizeName(body.name) : null;
 
   const KV = env && env.PRESENCE;
 
@@ -68,10 +75,17 @@ export async function onRequestPost({ request, env }) {
       !writtenAt || nowSec - writtenAt >= TTL_SECONDS - REPUT_WINDOW;
 
     if (changed || nearExpiry) {
-      await KV.put(key, JSON.stringify(record), {
-        expirationTtl: TTL_SECONDS,
-        metadata: { w: nowSec },
-      });
+      // Mirror the displayable record into metadata so the roster read can be
+      // served from KV.list alone (no per-key get — see readReals in index.js).
+      try {
+        await KV.put(key, JSON.stringify(record), {
+          expirationTtl: TTL_SECONDS,
+          metadata: { w: nowSec, t: tier, name: name || "", b: payload.b },
+        });
+      } catch {
+        // a transient KV error (quota, oversized key) must not 500 the beat —
+        // the roster below is still served (eventually consistent anyway).
+      }
     }
   }
 
