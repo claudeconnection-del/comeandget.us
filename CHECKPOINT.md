@@ -26,12 +26,12 @@ Full review (branch `claude/comeandget-code-review-gix3gm`). Landed fixes; 32/32
 - **P2:** `lures.js` cached hotspot centres (was `getBoundingClientRect` per hotspot per pointermove).
 - **Q2:** README rewritten to match reality (Cloudflare Pages + real file tree); removed unused
   `http-server` devDep (lock regenerated in sync).
+- **S2/S4 — rate limiting: ✅ DONE (owner, Cloudflare dashboard).** A Cloudflare **Rate Limiting
+  rule on `/api/vigil/*`** is now configured, capping per-IP request rate — closing the
+  unauthenticated KV write-flood (`beat`) and the `claim` code brute-force. Combined with the S3
+  read cap, both sides of the vigil API are now bounded. (Known free-plan gap: zone rules don't cover
+  the `*.pages.dev` alias — real domain is protected; pages.dev direct-hit accepted for now.)
 - **Residual / owner action (NOT code):**
-  - **S2/S4 — rate limiting.** `/api/vigil/beat` still allows unauthenticated client-chosen ids →
-    unbounded KV **writes**; `/api/vigil/claim` codes are brute-forceable. The read side is now bounded
-    (S3), but the write/claim side needs a **Cloudflare Rate Limiting rule on `/api/vigil/*`** (a KV
-    counter would itself add writes / can't protect the daily quota). Documented inline in `beat.js`/
-    `claim.js`.
   - **S7 — SHA-pin Actions.** `deploy.yml` still uses `@v4`/`@v3` tags; SHAs were unresolvable from
     this network (proxy 403). Inline note has the `git ls-remote …^{}` command to pin later.
   - Still recommended: set `PUZZLE_ANSWER` repo secret as **comma/newline-separated** (both answers)
