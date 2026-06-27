@@ -40,6 +40,11 @@ Full review (branch `claude/comeandget-code-review-gix3gm`). Landed fixes; 32/32
 - **Residual:** rotate `CODE_ARG1/2` — **deferred by owner** until steady state (still compromised per
   the SECURITY entry below; the live Cloudflare rate-limit rule blunts brute-force in the meantime).
 
+### 2026-06-27 (DNS LIVE) — comeandget.us cut over to Cloudflare Pages ✅
+- Apex `https://comeandget.us/` → 200 with a valid TLS cert; `www` → 301 → apex. `/api/vigil` returns
+  a live roster (ghosts + a real proof-of-life presence) and `claim` responds — Functions + KV are
+  live on the real domain (GitHub Pages would 404 the API). Proton MX untouched. **Migration complete.**
+
 ### 2026-06-27 (SECURITY — leak remediated; history reset) ✅
 - Incident: a prior seat wrote the two access codes AND both puzzle answers as literal values into
   this git-tracked file (introduced in `eb13ced`, pushed to **PUBLIC** `origin/main`), breaking the
@@ -168,10 +173,9 @@ dashboard "Connect to Git" flow.
      answers' first words are guarded (a single-segment value guards only one). ⚠️ See the SECURITY
      entry — these values are compromised and pending rotation.
 3. ✅ DONE — Proton sieve has the per-ARG codes (ARG1/cryptid reply → `CODE_ARG1`; ARG2/tech reply → `CODE_ARG2`).
-4. ⬅️ **CURRENT — DNS cutover.** Zone is on Cloudflare. In the `comeandget-us` Pages project →
-   **Custom domains** → add `comeandget.us` (and `www`); Cloudflare auto-creates the records (apex
-   CNAME-flattened → `comeandget-us.pages.dev`) + issues the cert, replacing the GitHub Pages records.
-   Proton MX untouched. No outage before the flip.
+4. ✅ DONE — DNS cut over. `comeandget.us` serves from Cloudflare Pages over HTTPS (valid cert);
+   `www` → apex (301). Functions + KV verified live on the apex (`/api/vigil` + `claim`). Proton MX
+   untouched. **The migration is complete and live.**
 
 ## Verify
 - Local: `npx wrangler pages dev` (needs `.dev.vars`) → serves `site/` + `functions/` with a
