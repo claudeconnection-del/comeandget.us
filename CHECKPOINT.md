@@ -7,17 +7,22 @@ at every feature-implementation change, at every spec update, and before pushing
 
 ## Checkpoint log (newest first)
 
-### 2026-06-27 (SECURITY — secrets were leaked into this tracked file; tip redacted) ⚠️
-- A prior seat wrote the two access codes AND both puzzle answers as literal values into this
-  git-tracked file (introduced in `eb13ced`, pushed to **PUBLIC** `origin/main`). That broke the
-  "names/status only" rule above and the honeypot's "answers never ship". The tip is now redacted to
-  names/status only.
-- ⛔ The values remain in **public git history** → treat the two access codes AND both puzzle answers
-  as **COMPROMISED**. Remediation pending owner decision: (a) **rotate** `CODE_ARG1`/`CODE_ARG2`
-  (Pages secrets + Proton replies); (b) the **answers are burned** — change them (re-key the ARG1
-  sigil + the ARG2 DNS riddle, update `secret/answer.txt` + the sieve subjects) or accept; (c) **purge
-  git history** (`git filter-repo`/BFG + force-push); (d) **extend the leak guard** to scan tracked
-  repo files, not just shipped `site/`. Do NOT rely on the gate as secret until rotated.
+### 2026-06-27 (SECURITY — leak remediated; history reset) ✅
+- Incident: a prior seat wrote the two access codes AND both puzzle answers as literal values into
+  this git-tracked file (introduced in `eb13ced`, pushed to **PUBLIC** `origin/main`), breaking the
+  "names/status only" rule above and the honeypot's "answers never ship".
+- Remediated: (a) ✅ redacted the file to names/status only; (b) ✅ **git history reset to a single
+  clean root commit** (`af7717c`) and force-pushed — the leak commits are unreachable; the stale
+  merged PR branch was deleted; (c) ✅ **tracked-file leak guard** added (`tests/smoke.spec.js`):
+  CI now fails if any needle appears in ANY tracked file, not just shipped `site/`, and the guard
+  now matches full answer phrases + first words; (d) ✅ removed the last literal answer words from
+  the test file. 32/32 smoke green; deployed.
+- Residual (owner's call): the values were briefly public before the reset — GitHub may retain
+  unreachable commits by SHA for a time (true purge = delete+recreate repo). **Access codes were NOT
+  value-rotated** (owner chose history-destruction); rotate `CODE_ARG1`/`CODE_ARG2` if concerned.
+  **Puzzle answers left unchanged** per owner decision. Also: set the `PUZZLE_ANSWER` repo secret to a
+  **comma/newline-separated** value (one answer per segment) so the CI guard covers BOTH answers' first
+  words (the current single-segment value only covers one).
 
 ### 2026-06-27 (vigil overlap fix) — presence can't overlap or hide behind the console
 - `main` is a centered panel (z-index 2); reworked the vigil so it can never collide: the chip stack
