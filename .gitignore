@@ -5,6 +5,9 @@ playwright-report/
 playwright/.cache/
 .DS_Store
 npm-debug.log*
+# Cloudflare local secrets for `wrangler pages dev` (codes + sign key) — never ship
+.dev.vars
+.wrangler/
 # scratch: local screenshot/preview helpers (never committed)
 _shot*.mjs
 cg-*.png

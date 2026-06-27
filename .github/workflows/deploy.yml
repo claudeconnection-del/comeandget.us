@@ -36,21 +36,20 @@ jobs:
           PUZZLE_ANSWER: ${{ secrets.PUZZLE_ANSWER }}
 
   deploy:
-    name: deploy to github pages
+    name: deploy to cloudflare pages
     needs: ci
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Deploy to Cloudflare Pages
+        # Argument-free `pages deploy`: wrangler.toml decides the directory,
+        # project name, and the PRESENCE KV binding. Uses the action's bundled
+        # wrangler (recent enough for pages_build_output_dir — an ancient
+        # wrangler is what trips "problem parsing the Wrangler configuration
+        # file"). On first run this auto-creates the comeandget-us project.
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy
