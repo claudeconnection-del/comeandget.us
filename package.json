@@ -13,7 +13,6 @@
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "html-validate": "^9.5.3",
-    "http-server": "^14.1.1",
     "wrangler": "^3.99.0"
   }
 }

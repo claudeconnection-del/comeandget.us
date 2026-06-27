@@ -6,6 +6,12 @@
 //
 // The codes are NOT the puzzle answers and live only in env (CODE_ARG1 /
 // CODE_ARG2). SIGN_KEY also lives only in env. None of them ship in source.
+//
+// This endpoint does NO KV write, so brute-force friction belongs at the edge:
+// add a Cloudflare **Rate Limiting** rule on `/api/vigil/*` (per-IP) rather than
+// a KV-counter (which would introduce writes where there are none). The compare
+// is already constant-time so a match can't be timed out (it does reveal code
+// LENGTH via the early length check — low risk for short shared codes).
 
 import { timingSafeEqual, signTier, json } from "./_lib.js";
 

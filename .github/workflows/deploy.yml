@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# Hardening follow-up (supply chain): the actions below are pinned to mutable
+# major tags (@v4 / @v3). For full integrity, pin each to a commit SHA, e.g.
+#   git ls-remote https://github.com/actions/checkout refs/tags/v4^{}
+# then replace `@v4` with `@<sha>  # v4`. Left as tags here because this network
+# couldn't resolve the SHAs at edit time; pinning a wrong SHA would break deploy.
+
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: false

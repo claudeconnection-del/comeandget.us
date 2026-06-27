@@ -32,7 +32,9 @@ export function b64urlDecode(s) {
 // v===1 and a numeric b. Ghost ids encode plaintext, so they can never satisfy
 // this. Returns the parsed payload on success, or null.
 export function decodeRealPayload(id) {
-  if (typeof id !== "string" || !id || id.length > 512) return null;
+  // cap < 512 so the KV key "p:" + id stays within Cloudflare KV's 512-byte key
+  // limit (a longer id would make KV.put throw). Real ids are ~80-150 chars.
+  if (typeof id !== "string" || !id || id.length > 500) return null;
   let txt;
   try {
     txt = b64urlDecode(id);
@@ -114,15 +116,35 @@ export async function verifyTier(signKey, token) {
 
 // ---- name sanitization -----------------------------------------------------
 // Restrained allowlist (letters/digits/-._ + spaces), trimmed, capped, HTML
-// stripped by construction. Needle words are rejected without ever writing them
-// in source: they are rebuilt from char codes so the leak guard stays green.
-const NEEDLE_CODES = [
-  [105, 110, 100, 114, 105, 100], //  the cryptid name's first word
-  [99, 111, 110, 100, 105, 116, 105, 111, 110, 97, 108], //  the tech answer's first word
+// stripped by construction. The two forbidden answer-words are matched WITHOUT
+// ever shipping them — not even as char codes, which were trivially decodable
+// from this (public) source and silently bypassed the string-only leak guard.
+// Instead we ship only the SHA-256 of each word (the same one-way pattern the
+// gate key uses in site/js/whispers/threshold.js) plus its length, and reject a
+// name if any same-length substring hashes to a forbidden digest. The plaintext
+// answer-word now appears nowhere in the repo.
+const FORBIDDEN_HASHES = [
+  { len: 6, hash: "58a012dcab81199ece3f16ca6f74738ae9d41af92ba44a25797c7f08acb5e376" },
+  { len: 11, hash: "6929adae851d8522fccccc1cd3059119748cc66eeb8168ce7e5e7c79b98d7d63" },
 ];
-const FORBIDDEN = NEEDLE_CODES.map((c) => String.fromCharCode(...c));
 
-export function sanitizeName(raw) {
+async function sha256hex(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// True if `low` (already lowercased) contains a forbidden word as a substring.
+// Only same-length windows are hashed, so the work is bounded (name ≤ 24 chars).
+async function containsForbidden(low) {
+  for (const { len, hash } of FORBIDDEN_HASHES) {
+    for (let i = 0; i + len <= low.length; i++) {
+      if ((await sha256hex(low.slice(i, i + len))) === hash) return true;
+    }
+  }
+  return false;
+}
+
+export async function sanitizeName(raw) {
   if (typeof raw !== "string") return null;
   let s = raw.trim().slice(0, 24);
   if (!s) return null;
@@ -131,8 +153,7 @@ export function sanitizeName(raw) {
   // collapse runs of whitespace
   s = s.replace(/\s+/g, " ").trim();
   if (!s) return null;
-  const low = s.toLowerCase();
-  for (const f of FORBIDDEN) if (low.includes(f)) return null;
+  if (await containsForbidden(s.toLowerCase())) return null;
   return s;
 }
 
