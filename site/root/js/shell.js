@@ -17,7 +17,8 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     term.appendChild(document.createTextNode((Array.isArray(text) ? text.join("\n") : text) + "\n"));
     // bound scrollback so a very long session can't grow the DOM forever
     while (term.childNodes.length > 600) term.removeChild(term.firstChild);
-    term.scrollTop = term.scrollHeight;
+    const sc = term.parentElement; // the scrolling console wrapper
+    if (sc) sc.scrollTop = sc.scrollHeight;
   }
   const rng = (n) => (Math.random() * n) | 0;
   const pick = (a) => a[rng(a.length)];
