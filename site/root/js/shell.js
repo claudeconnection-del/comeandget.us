@@ -933,6 +933,18 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   let draft = "";
   input.addEventListener("keydown", (e) => {
     if (state.gaming) return;
+    // Ctrl+C: if text is selected, it's a copy — let the browser do it. Otherwise
+    // behave like a shell: echo the abandoned line with ^C and clear the input.
+    if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === "c" || e.key === "C")) {
+      const hasSel = String(window.getSelection ? window.getSelection() : "") || input.selectionStart !== input.selectionEnd;
+      if (hasSel) return; // copy gesture — don't cancel the line
+      e.preventDefault();
+      println("PS C:\\> " + input.value + "^C");
+      input.value = "";
+      histIdx = history.length;
+      draft = "";
+      return;
+    }
     if (e.key === "ArrowUp") {
       e.preventDefault();
       if (!history.length) return;

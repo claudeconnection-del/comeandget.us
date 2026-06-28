@@ -78,6 +78,9 @@ main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
   word-break: break-word;
   max-height: 48vh;
   overflow-y: auto;
+  cursor: text;                 /* the scrollback reads as selectable text */
+  -webkit-user-select: text;
+  user-select: text;            /* highlight + copy the console output */
 }
 .term .muted { color: var(--ash); }
 /* while the arcade is running, show the whole playfield, no wrap/scroll */
