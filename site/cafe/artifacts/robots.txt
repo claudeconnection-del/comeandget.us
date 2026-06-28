@@ -1,0 +1,6 @@
+# byte café — crawler manners
+User-agent: *
+Disallow: /cafe/artifacts/staff-room.html
+
+# staff only past this point.
+# (nothing stops a curious human, though — go peek.)

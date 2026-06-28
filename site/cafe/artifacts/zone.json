@@ -1,0 +1,11 @@
+{
+  "specials.cafe": [{ "type": "CNAME", "value": "beans.cafe" }],
+  "beans.cafe": [{ "type": "TXT", "value": "origin=ethiopia-yirgacheffe; roast=light; flag=Y2FmZXtzaW5nbGVfb3JpZ2luX3NlY3JldHN9" }],
+  "cafe": [
+    { "type": "A", "value": "127.0.0.1" },
+    { "type": "MX", "value": "10 mail.cafe" },
+    { "type": "TXT", "value": "hours=7am-7pm; wifi=guest; v=spf1 -all" }
+  ],
+  "menu.cafe": [{ "type": "CNAME", "value": "cafe" }],
+  "mail.cafe": [{ "type": "A", "value": "127.0.0.2" }]
+}

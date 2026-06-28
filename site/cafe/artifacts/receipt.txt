@@ -1,0 +1,17 @@
+        ☕  BYTE CAFÉ  ☕
+  --------------------------------
+   1x  flat white            $4.00
+   1x  almond croissant      $3.50
+  --------------------------------
+   subtotal                  $7.50
+   tip (rounded up)          $0.50
+  --------------------------------
+   TOTAL                     $8.00
+
+   thanks a latte for stopping by!
+
+   psst — the secret isn't printed on the
+   receipt. it's in *how* this file is served.
+   peek at the response headers:
+
+       curl -I receipt.txt
