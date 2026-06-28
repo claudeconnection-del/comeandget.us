@@ -1,8 +1,13 @@
 # Byte Café v2 — a fuller pseudo-terminal (RESUMABLE SPEC)
 
-> **Status: APPROVED, NOT YET BUILT.** Handoff spec — a teammate can resume cold from this
-> file. Author left at session limit. All design decisions below are the owner's, confirmed.
-> Build it, verify, deploy (push to `main` auto-deploys via the existing Pages pipeline).
+> **Status: SHIPPED (2026-06-28).** Built, verified (html-validate + 32/32 Playwright smoke +
+> leak guard, all green), and deployed via the Pages pipeline. One owner-approved scope change
+> during the build: **"4K" is now a single global upgrade shared by ALL four games** (not just
+> Tetris) — easy to unlock (finish any game once, or land a Tetris) and freely toggleable
+> (`4k on|off`, plus per-launch `tetris 4k` / `snake plain`). The rest matches this spec.
+>
+> _Original handoff note (kept for history):_ APPROVED, NOT YET BUILT. Handoff spec — a teammate
+> can resume cold from this file. All design decisions below are the owner's, confirmed.
 
 ## 0. Context you need first
 

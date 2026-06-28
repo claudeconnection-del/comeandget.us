@@ -338,9 +338,10 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       "commands: help  whoami  sudo  ls [-a]  cd <dir>  cat <file>  pwd  find <x>  tree",
       "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
       "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
-      "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  clear  exit",
+      "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  cafe  clear  exit",
       "          present (others)  claim <code>  name <newname>",
       "          arcade: galaga  doom  snake  pong  breakout  tetris    ...and more.",
+      "(tired of the rain? type 'cafe' for the warm side. ☕)",
       "(this box speaks PowerShell, bash, and DOS — type however you think.)",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
@@ -949,6 +950,22 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   CMD.exorcise = () => "too late. it's load-bearing now.";
   CMD.weather = () => "forecast: rain, then fire, then rain. as usual.";
   CMD.whois = () => "domain: comeandget.us\nregistrant: redacted\nstatus: watching\nnameservers: the ones you came through";
+
+  // cafe: cross over to Byte Café — the warm twin — on a sunrise. the dread
+  // softens into dawn, then the door opens onto the cozy side.
+  CMD.cafe = () => {
+    const rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ov = document.createElement("div");
+    ov.className = "sunrise";
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add("rise"));
+    if (flare) flare(1500);
+    surge(900);
+    setTimeout(() => { location.href = "/cafe/?from=root"; }, rm ? 220 : 1000);
+    return "the embers settle, and something warmer kindles. the rain thins to morning. (opening Byte Café — the door's unlocked, the coffee's hot. ☕)";
+  };
+  CMD.bytecafe = () => CMD.cafe();
+  CMD.coffeehouse = () => CMD.cafe();
 
   // --- command history (up/down recall) ---
   const history = [];

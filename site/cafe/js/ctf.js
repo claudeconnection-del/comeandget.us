@@ -195,7 +195,7 @@ export function cafeCommands() {
       } else {
         const n = solvedSet().size;
         api.print(api.sp("✦ ", "c-warn spark"), api.sp("nice! ", "c-ok bold"), api.sp(c.id + " solved.  ", "c-text"), api.sp("badge: ", "c-muted"), api.sp(c.badge.emoji + " " + c.badge.name, "c-accent"));
-        if (n === total) api.print(api.sp("★ " + n + " / " + total + " — you cleared the whole café! ", "c-warn"), api.sp("☕✨ thanks for stopping by.", "c-ok"));
+        if (n === total) api.print(api.sp("★ " + n + " / " + total + " — you cleared the whole café! ", "c-warn"), api.sp("☕✨ the night shift tips their hats (those that have them). come back soon.", "c-ok"));
         else api.print(api.sp("★ " + n + " / " + total + " solved", "c-warn"), api.sp("  ·  next: ", "c-muted"), api.kbd("ls"));
       }
     } else {

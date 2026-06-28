@@ -184,6 +184,34 @@ main {
   50% { opacity: 0.55; }
 }
 
+/* a warmer way in: the Byte Café door, just off to the side of the rabbit. it
+   stays hidden through the feign AND for ~15s after the page wakes, then a soft
+   warm light rises. distinct icon, distinct (amber) glow — never competes with
+   the rabbit. */
+.cafe-door {
+  position: fixed;
+  bottom: 1.15rem;
+  left: calc(50% + 38px);
+  width: 26px;
+  height: 26px;
+  z-index: 4;
+  color: #e8a23d;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, transform 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(232, 162, 61, 0.45));
+}
+.cafe-door svg { display: block; width: 100%; height: 100%; }
+.cafe-door:hover,
+.cafe-door:focus-visible { opacity: 0.95; outline: none; transform: translateY(-2px); }
+body:not(.dormant) .cafe-door { animation: cafe-rise 1.4s ease 15s both; }
+@keyframes cafe-rise {
+  0% { opacity: 0; visibility: hidden; transform: translateY(6px); }
+  1% { visibility: visible; }
+  100% { opacity: 0.6; visibility: visible; transform: translateY(0); }
+}
+
 /* --- keyframes --- */
 @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
@@ -232,4 +260,6 @@ body.dormant .corner { opacity: 0; }
   .line.glitch, .sigil.opened,
   main.gl-chroma .line, main.gl-chroma .subtle, main.gl-chroma .sigil,
   main.gl-chroma .reveal, main.gl-chroma .ghost, .rabbit { animation: none !important; }
+  /* no timed reveal under reduced motion — show the café door once awake */
+  body:not(.dormant) .cafe-door { animation: none !important; opacity: 0.6; visibility: visible; }
 }

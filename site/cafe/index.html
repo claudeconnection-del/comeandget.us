@@ -13,13 +13,13 @@
 <body>
   <main class="window" aria-label="Byte Café terminal">
     <header class="titlebar">
-      <span class="lights" aria-hidden="true"><span class="lt r"></span><span class="lt y"></span><span class="lt g"></span></span>
+      <span class="lights"><button class="lt r" id="btn-close" type="button" aria-label="Clear the screen (keeps your progress)"></button><button class="lt y" id="btn-min" type="button" aria-label="Minimize to an ambient view"></button><button class="lt g" id="btn-zoom" type="button" aria-label="Zoom the window larger"></button></span>
       <span class="title">byte café — playground — zsh</span>
       <button class="themebtn" id="themebtn" type="button" aria-label="Toggle light and dark mode" title="Toggle theme">☾</button>
     </header>
     <div class="console" id="console">
       <pre class="term" id="term" role="log" aria-live="polite"><span class="welcome">welcome to byte café</span> ☕  — a cozy little capture-the-flag playground.
-brew something warm, settle in. nothing here bites.
+brew something warm, settle in. the night shift keeps the kettle on — nothing here bites.
 
 type <span class="kbd">help</span> to see what you can do, or <span class="kbd">ls</span> to browse the challenges.</pre>
       <form class="cmdline" id="cmdline" autocomplete="off">

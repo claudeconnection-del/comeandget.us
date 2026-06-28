@@ -265,9 +265,27 @@ main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
 
 @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
+/* the `cafe` crossing: a warm sun grows out of the embers, then we navigate to
+   the cozy twin. dread → dawn. */
+.sunrise {
+  position: fixed; inset: 0; z-index: 9; pointer-events: none;
+  display: grid; place-items: center; opacity: 0;
+  transition: opacity 1s ease;
+}
+.sunrise::before {
+  content: "";
+  width: 42vmax; height: 42vmax; border-radius: 50%;
+  background: radial-gradient(closest-side, #fff0d0, #ffae5a 38%, #ff7a18 66%, rgba(255, 122, 24, 0) 100%);
+  transform: scale(0.18);
+  transition: transform 1s ease;
+}
+.sunrise.rise { opacity: 1; }
+.sunrise.rise::before { transform: scale(6); }
+
 @media (prefers-reduced-motion: reduce) {
   .cursor { animation: none; }
   main::before { animation: none; opacity: 0.14; }
   .vigil-chip { transition: none; }
   #vigil-drift { display: none; }
+  .sunrise, .sunrise::before { transition-duration: 0.2s; }
 }
