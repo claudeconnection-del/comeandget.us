@@ -12,15 +12,14 @@ const term = createTerminal();
 const { api } = term;
 initWindow(api);
 
-// arriving from /root via the `cafe` command: play the sunrise's arrival half —
-// a warm wash that fades up into the café. (CSS handles reduced-motion: instant.)
+// arriving from /root via the `cafe` command: the window itself morphs in via a
+// cross-document view transition. Here we just breathe a soft warm "dawn" glow on
+// the window as it settles — no full-screen wash, so it lands cleanly in dark.
+// (CSS handles reduced-motion.)
 try {
   if (new URLSearchParams(location.search).get("from") === "root") {
-    const wash = document.createElement("div");
-    wash.className = "arrive";
-    wash.setAttribute("aria-hidden", "true");
-    document.body.appendChild(wash);
-    setTimeout(() => wash.remove(), 1300);
+    const win = document.querySelector(".window");
+    if (win) { win.classList.add("arriving"); setTimeout(() => win.classList.remove("arriving"), 1300); }
     if (history.replaceState) history.replaceState(null, "", location.pathname); // don't replay on refresh
   }
 } catch {}

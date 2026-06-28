@@ -954,14 +954,12 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   // cafe: cross over to Byte Café — the warm twin — on a sunrise. the dread
   // softens into dawn, then the door opens onto the cozy side.
   CMD.cafe = () => {
+    // a soft warm flare on the way out; the dread console then morphs into the
+    // café window via a cross-document view transition (see ember.css/cafe.css).
     const rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const ov = document.createElement("div");
-    ov.className = "sunrise";
-    document.body.appendChild(ov);
-    requestAnimationFrame(() => ov.classList.add("rise"));
-    if (flare) flare(1500);
-    surge(900);
-    setTimeout(() => { location.href = "/cafe/?from=root"; }, rm ? 220 : 1000);
+    if (flare) flare(800);
+    surge(600);
+    setTimeout(() => { location.href = "/cafe/?from=root"; }, rm ? 120 : 420);
     return "the embers settle, and something warmer kindles. the rain thins to morning. (opening Byte Café — the door's unlocked, the coffee's hot.)";
   };
   CMD.bytecafe = () => CMD.cafe();

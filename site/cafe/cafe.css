@@ -176,13 +176,28 @@ body.minimized .window { height: auto; }
   color: var(--muted); font-family: var(--font-ui); font-size: 13px; letter-spacing: 0.02em;
 }
 
-/* ── sunrise arrival (when crossing in from /root with ?from=root) ── */
-.arrive {
-  position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: 1;
-  background: radial-gradient(125% 105% at 50% 62%, var(--warn), color-mix(in srgb, var(--accent) 55%, var(--bg)) 52%, var(--bg) 100%);
-  animation: arrive-fade 1100ms ease forwards;
+/* ── the /root → /cafe crossing ──────────────────────────────────────
+   The terminal frame is a shared element across both pages (same
+   view-transition-name), so the dread console smoothly resizes + restyles into
+   this window — and if the boxes ever matched, it would simply stay put and
+   crossfade style. Dark → dark, so no full-screen flash. A soft warm glow
+   breathes on the window as it settles: a gentle dawn, not a blow-out. */
+@view-transition { navigation: auto; }
+.window { view-transition-name: cafe-terminal; }
+::view-transition-group(cafe-terminal) {
+  animation-duration: 600ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
-@keyframes arrive-fade { 0% { opacity: 1; } 100% { opacity: 0; } }
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: 650ms;
+  animation-timing-function: ease;
+}
+.window.arriving { animation: dawn-settle 1200ms ease both; }
+@keyframes dawn-settle {
+  0%   { box-shadow: var(--shadow); }
+  50%  { box-shadow: var(--shadow), 0 0 60px color-mix(in srgb, var(--warn) 50%, transparent); }
+  100% { box-shadow: var(--shadow); }
+}
 
 @media (max-width: 560px) {
   .window { width: 94vw; height: min(86svh, 720px); }
@@ -193,6 +208,7 @@ body.minimized .window { height: auto; }
 @media (prefers-reduced-motion: reduce) {
   .spark { animation: none; }
   .ambient .mote, .ambient .steam { animation: none; }
-  .arrive { animation: none; opacity: 0; }
+  .window.arriving { animation: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 1ms !important; }
   * { transition: none !important; }
 }
