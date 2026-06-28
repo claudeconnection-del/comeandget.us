@@ -45,7 +45,12 @@ body::after {
 main {
   position: relative;
   z-index: 2;
-  width: min(92vw, 760px);
+  width: min(760px, 92vw);
+  /* a static console: a fixed-size window, so output, ASCII art and the arcade
+     games always render at a consistent scale — with rain around it for the vibes */
+  height: 32rem;
+  display: flex;
+  flex-direction: column;
   padding: 1.4rem 1.6rem;
   /* a console panel that dims the fire behind the text for legibility */
   background: rgba(5, 3, 2, 0.68);
@@ -55,6 +60,8 @@ main {
   -webkit-backdrop-filter: blur(2px);
   box-shadow: 0 0 44px rgba(0, 0, 0, 0.6);
 }
+/* the arcade needs the whole playfield: let the panel grow to fit a running game */
+main:has(.term.gaming) { height: auto; }
 /* a living, themed border that breathes — and surges on events */
 main::before {
   content: "";
@@ -70,13 +77,14 @@ main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
 @keyframes borderpulse { 0%, 100% { opacity: 0.05; } 50% { opacity: 0.26; } }
 
 .term {
-  font-size: clamp(0.8rem, 2.2vw, 1.05rem);
+  font-size: 0.95rem;           /* static — a consistent character cell for text + games */
   line-height: 1.7;
   color: var(--term-fg); /* light, themed — high contrast against the fire */
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 48vh;
+  flex: 1 1 auto;               /* fill the fixed-size panel; scroll the overflow within it */
+  min-height: 0;
   overflow-y: auto;
   cursor: text;                 /* the scrollback reads as selectable text */
   -webkit-user-select: text;
@@ -92,7 +100,8 @@ main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
   align-items: baseline;
   gap: 0.5ch;
   margin-top: 0.3rem;
-  font-size: clamp(0.8rem, 2.2vw, 1.05rem);
+  font-size: 0.95rem;           /* match the static term */
+  flex: 0 0 auto;               /* pinned at the bottom of the fixed panel */
 }
 .cmdline .ps {
   color: var(--ember);
@@ -109,6 +118,16 @@ main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
   color: var(--spark);
   caret-color: var(--spark);
   text-shadow: 0 0 8px rgba(255, 210, 122, 0.3);
+}
+
+/* the panel is a fixed size on desktop; below that, shrink to fit small/short
+   viewports so nothing overflows (and the arcade stays mostly playable) */
+@media (max-width: 640px) {
+  main { width: 94vw; height: 30rem; }
+  .term, .cmdline { font-size: 0.82rem; }
+}
+@media (max-height: 600px) {
+  main { height: 90vh; }
 }
 
 .noscript {
