@@ -341,7 +341,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  cafe  clear  exit",
       "          present (others)  claim <code>  name <newname>",
       "          arcade: galaga  doom  snake  pong  breakout  tetris    ...and more.",
-      "(tired of the rain? type 'cafe' for the warm side. ☕)",
+      "(tired of the rain? type 'cafe' for the warm side.)",
       "(this box speaks PowerShell, bash, and DOS — type however you think.)",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
@@ -962,7 +962,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     if (flare) flare(1500);
     surge(900);
     setTimeout(() => { location.href = "/cafe/?from=root"; }, rm ? 220 : 1000);
-    return "the embers settle, and something warmer kindles. the rain thins to morning. (opening Byte Café — the door's unlocked, the coffee's hot. ☕)";
+    return "the embers settle, and something warmer kindles. the rain thins to morning. (opening Byte Café — the door's unlocked, the coffee's hot.)";
   };
   CMD.bytecafe = () => CMD.cafe();
   CMD.coffeehouse = () => CMD.cafe();

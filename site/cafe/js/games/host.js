@@ -104,7 +104,7 @@ export function runGame({ name, create, api, controls = "← → move · q quit"
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillStyle = palette.accent;
     ctx.font = "700 26px ui-monospace, monospace";
-    ctx.fillText("last call ☕", W / 2, y + 42);
+    ctx.fillText("last call", W / 2, y + 42);
     const rec = highScore(name);
     ctx.fillStyle = palette.text;
     ctx.font = "16px ui-monospace, monospace";
@@ -153,13 +153,13 @@ export function runGame({ name, create, api, controls = "← → move · q quit"
     teardown();
     const rec = recordScore(name, score);
     if (rec.best && score > 0) {
-      api.print(api.sp("✦ ", "c-warn spark"), api.sp("new high score! ", "c-ok bold"), api.sp(name + " · " + score, "c-text"));
+      api.print(api.sp("★ ", "c-warn"), api.sp("new high score — ", "c-ok bold"), api.sp(name + " · " + score, "c-text"));
     } else {
       api.print(api.sp("thanks for playing ", "c-muted"), api.sp(name, "c-text"), api.sp(" · score " + score, "c-muted"), api.sp("  (best " + Math.max(rec.prev, score) + ")", "c-subtle"));
     }
     // playing any game once is enough to earn the 4K glow-up
     if (!fancy && unlock4k()) {
-      api.print(api.sp("✦ ", "c-warn spark"), api.sp("4K unlocked!", "c-ok bold"), api.sp(" the glow-up is on for every game — neon, particles, a little shake.", "c-text"));
+      api.print(api.sp("◆ ", "c-warn"), api.sp("4K unlocked", "c-ok bold"), api.sp(" — the glow-up is on for every game: neon, particles, a little shake.", "c-text"));
       api.print(api.sp("  toggle it anytime with ", "c-muted"), api.kbd("4k"), api.sp(", or play one now: ", "c-muted"), api.kbd(name + " 4k"));
     }
     if (typeof game.onQuit === "function") { try { game.onQuit(api); } catch {} }

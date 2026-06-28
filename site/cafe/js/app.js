@@ -48,12 +48,12 @@ const meta = {
     api.print(api.sp("look & feel", "c-accent bold"));
     api.print(api.sp("  theme dark|light    clear", "c-text"), api.sp("     (or tap the ☾/☀ and the dots up top)", "c-muted"));
     api.blank();
-    api.print(api.sp("new here? try ", "c-muted"), api.kbd("open welcome-mat"), api.sp(" then ", "c-muted"), api.kbd("ls"), api.sp(". have fun. ☕", "c-muted"));
+    api.print(api.sp("new here? try ", "c-muted"), api.kbd("open welcome-mat"), api.sp(" then ", "c-muted"), api.kbd("ls"), api.sp(". have fun.", "c-muted"));
   },
   about: () => {
     api.print(api.sp("byte café", "welcome"));
     api.print(api.sp("a friendly little CTF in a cozy terminal — the warm twin of comeandget.us.", "c-text"));
-    api.print(api.sp("the same regulars work the night shift here. on this side they just want you caffeinated. ☕", "c-muted"));
+    api.print(api.sp("the same regulars work the night shift here. on this side they just want you caffeinated.", "c-muted"));
     api.print(api.sp("it all runs in your browser. nothing tracked, nothing bites. browse with ", "c-muted"), api.kbd("ls"), api.sp(".", "c-muted"));
   },
   clear: () => api.clearScreen(),
@@ -63,7 +63,7 @@ const meta = {
     else if (!a) { const nx = curTheme() === "dark" ? "light" : "dark"; setTheme(nx); api.print(api.sp("theme: " + nx, "c-accent"), api.sp("  (you can also tap ☾/☀ up top)", "c-muted")); }
     else api.print(api.sp("usage: ", "c-muted"), api.kbd("theme dark|light"));
   },
-  exit: () => api.print(api.sp("there's no leaving a café this cozy ☕ — just close the tab when you're done.", "c-muted")),
+  exit: () => api.print(api.sp("there's no leaving a café this cozy — just close the tab when you're done.", "c-muted")),
 };
 
 term.register(meta);

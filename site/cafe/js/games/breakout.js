@@ -42,7 +42,7 @@ export function breakout(host) {
   return {
     get over() { return over; },
     get score() { return score; },
-    get hud() { return (host.fancy ? "breakout 4K · score " : "breakout · score ") + score + " · ♥ " + lives; },
+    get hud() { return (host.fancy ? "breakout 4K · score " : "breakout · score ") + score + " · lives " + lives; },
     key(n, down) {
       if (n === "left") left = down;
       else if (n === "right") right = down;
@@ -125,7 +125,7 @@ export function breakout(host) {
       ctx.restore();
       if (won) {
         ctx.fillStyle = palette.ok; ctx.textAlign = "center"; ctx.font = "700 22px ui-monospace, monospace";
-        ctx.fillText("wall cleared! ☕", g.w / 2, g.h * 0.4);
+        ctx.fillText("wall cleared", g.w / 2, g.h * 0.4);
       } else if (!launched) {
         ctx.fillStyle = palette.muted; ctx.textAlign = "center"; ctx.font = "14px ui-monospace, monospace";
         ctx.fillText("space / tap to serve", g.w / 2, g.h * 0.55);

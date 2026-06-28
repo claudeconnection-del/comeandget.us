@@ -102,7 +102,7 @@ export function pong(host) {
       ctx.restore();
       if (over) {
         ctx.fillStyle = ps > as ? palette.ok : palette.love; ctx.textAlign = "center"; ctx.font = "700 22px ui-monospace, monospace";
-        ctx.fillText(ps > as ? "you win! the house buys ☕" : "the house wins — rematch?", w / 2, h * 0.45);
+        ctx.fillText(ps > as ? "you win — the house buys the next round" : "the house wins — rematch?", w / 2, h * 0.45);
       }
     },
   };

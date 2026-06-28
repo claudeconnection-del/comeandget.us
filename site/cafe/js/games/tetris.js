@@ -242,7 +242,7 @@ export function tetris(host, { fancy = false } = {}) {
       ctx.fillStyle = palette.text; ctx.fillText(String(lines), px, sy + cell * 0.7);
       ctx.fillStyle = palette.muted; ctx.fillText("level", px, sy + cell * 1.8);
       ctx.fillStyle = palette.text; ctx.fillText(String(level), px, sy + cell * 2.5);
-      if (fy) { ctx.fillStyle = palette.accent; ctx.font = "700 " + Math.round(cell * 0.5) + "px ui-monospace, monospace"; ctx.fillText("✦ 4K", px, sy + cell * 3.8); }
+      if (fy) { ctx.fillStyle = palette.accent; ctx.font = "700 " + Math.round(cell * 0.5) + "px ui-monospace, monospace"; ctx.fillText("◆ 4K", px, sy + cell * 3.8); }
 
       ctx.restore();
     },

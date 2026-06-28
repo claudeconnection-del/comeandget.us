@@ -13,7 +13,7 @@ export function initWindow(api) {
   // 🔴 clear the screen — never the progress
   if (close) close.addEventListener("click", () => {
     api.clearScreen();
-    api.print(api.sp("✧ ", "c-warn"), api.sp("the night shift wiped the counter for you — your badges, scores & unlocks are safe. ☕", "c-muted"));
+    api.print(api.sp("the night shift wiped the counter — your badges, scores and unlocks are safe.", "c-muted"));
     api.focus();
   });
 
@@ -38,7 +38,7 @@ export function initWindow(api) {
   }
   const hint = document.createElement("p");
   hint.className = "ambient-hint";
-  hint.textContent = "the café is resting — tap anywhere to come back ☕";
+  hint.textContent = "the café is resting — tap anywhere to come back";
   ambient.appendChild(hint);
   document.body.appendChild(ambient);
 

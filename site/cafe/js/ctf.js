@@ -3,11 +3,13 @@
 // artifacts carry only encoded forms, the manifest only hashes. Progress, hints,
 // and theme live in localStorage.
 
+// each family gets a small diamond in its own accent colour — quiet visual
+// identity without leaning on emoji.
 const FAM = {
-  encoding: { icon: "🔑", label: "encoding" },
-  web: { icon: "🍪", label: "web · http" },
-  dns: { icon: "📡", label: "dns" },
-  forensics: { icon: "🔎", label: "forensics" },
+  encoding: { mark: "c-accent", label: "encoding" },
+  web: { mark: "c-warn", label: "web · http" },
+  dns: { mark: "c-pine", label: "dns" },
+  forensics: { mark: "c-ok", label: "forensics" },
 };
 
 const LOYALTY_JWT =
@@ -16,7 +18,7 @@ const LOYALTY_JWT =
 
 export const CHALLENGES = [
   {
-    id: "welcome-mat", family: "encoding", stars: 1, badge: { emoji: "☕", name: "First Sip" },
+    id: "welcome-mat", family: "encoding", stars: 1, badge: { name: "First Sip" },
     blurb: "a free sample, on the house",
     prompt: ["Every café leaves out a free sample. Decode this little token and taste it."],
     show: ["sample (base64)", "Y2FmZXtmaXJzdF9zaXBfZnJlZX0="],
@@ -28,7 +30,7 @@ export const CHALLENGES = [
     flagHash: "96903a089391db0bb61da797137e422369500564a92606cedfa74df3e09eddfe",
   },
   {
-    id: "receipt-roll", family: "web", stars: 2, badge: { emoji: "🧾", name: "Fine Print" },
+    id: "receipt-roll", family: "web", stars: 2, badge: { name: "Fine Print" },
     blurb: "your receipt prints more than you think",
     prompt: [
       "Order up! Your receipt is at artifacts/receipt.txt — but the secret isn't on the paper.",
@@ -43,7 +45,7 @@ export const CHALLENGES = [
     flagHash: "0d8d91be24543579ecb48bfa2a592d2b4efc8366722158895a4673abd83dd3f2",
   },
   {
-    id: "back-of-house", family: "web", stars: 2, badge: { emoji: "🚪", name: "Staff Only" },
+    id: "back-of-house", family: "web", stars: 2, badge: { name: "Staff Only" },
     blurb: "what does the robots file fence off?",
     prompt: [
       "Every café has a back room. Ours politely asks crawlers to skip one page.",
@@ -58,7 +60,7 @@ export const CHALLENGES = [
     flagHash: "8666afe4dfbb8794a4163d86441c3ecb7b28b098e190dff5cc803402b5b4e1ed",
   },
   {
-    id: "daily-grind", family: "dns", stars: 3, badge: { emoji: "🌱", name: "Trail Follower" },
+    id: "daily-grind", family: "dns", stars: 3, badge: { name: "Trail Follower" },
     blurb: "follow today's bean origin through DNS",
     prompt: [
       "We publish today's single-origin as DNS records. Start at specials.cafe and follow the trail.",
@@ -72,7 +74,7 @@ export const CHALLENGES = [
     flagHash: "eff2d7454823cb7f22fcbf29f52231887b30ca4d5aa0579e57bd4998bed49951",
   },
   {
-    id: "loyalty-card", family: "encoding", stars: 3, badge: { emoji: "🎫", name: "Refills Forever" },
+    id: "loyalty-card", family: "encoding", stars: 3, badge: { name: "Refills Forever" },
     blurb: "a loyalty card nobody bothered to verify",
     prompt: [
       "Your barista-club card is a JWT claiming unlimited refills. But who actually signed it?",
@@ -87,7 +89,7 @@ export const CHALLENGES = [
     flagHash: "a3441c80fbfffd0e6de14e4fe04e958f23bf8fabc7c3d4b14f1f66a019ebc1c8",
   },
   {
-    id: "spilled-grounds", family: "forensics", stars: 3, badge: { emoji: "📋", name: "Pattern Spotter" },
+    id: "spilled-grounds", family: "forensics", stars: 3, badge: { name: "Pattern Spotter" },
     blurb: "one order matches the secret promo — grep it out",
     prompt: [
       "A day of orders spilled across the floor: artifacts/orders.log.",
@@ -103,7 +105,7 @@ export const CHALLENGES = [
     flagHash: "ad252dcbb75237845c616d0843d5206f36566391b13fc283b69f0e1005b7e5d8",
   },
   {
-    id: "hidden-roast", family: "forensics", stars: 3, badge: { emoji: "🖼️", name: "Deep Roast" },
+    id: "hidden-roast", family: "forensics", stars: 3, badge: { name: "Deep Roast" },
     blurb: "this roast photo is hiding something",
     prompt: [
       "Our roast-of-the-day photo (artifacts/roast.png) smells like more than coffee.",
@@ -140,7 +142,7 @@ export function cafeCommands() {
   function progressLine(api) {
     const n = solvedSet().size;
     api.print(api.sp(`★ ${n} / ${total} solved`, "c-warn"),
-      n === total ? api.sp("  — the whole café is yours ☕✨", "c-ok") : api.sp("  ·  open one with ", "c-muted"),
+      n === total ? api.sp("  —  the whole café is yours", "c-ok") : api.sp("  ·  open one with ", "c-muted"),
       n === total ? "" : api.kbd("open <name>"));
   }
 
@@ -152,7 +154,7 @@ export function cafeCommands() {
       const fam = FAM[c.family];
       const done = solved.has(c.id);
       api.print(
-        api.sp(fam.icon + " ", ""),
+        api.sp("◆ ", fam.mark),
         api.sp(c.id.padEnd(16), done ? "c-ok" : "c-text"),
         api.sp(("★".repeat(c.stars)).padEnd(4), "c-warn"),
         api.sp(done ? "✓ solved " : "open     ", done ? "c-ok" : "c-muted"),
@@ -170,7 +172,7 @@ export function cafeCommands() {
     if (!c) { api.print(api.sp("no challenge called ", "c-muted"), api.sp(id || "(none)", "c-love"), api.sp(". the board: ", "c-muted"), api.kbd("ls")); return; }
     const fam = FAM[c.family];
     const done = solvedSet().has(c.id);
-    api.print(api.sp(fam.icon + " " + c.id, "c-accent bold"), api.sp("  " + fam.label + "  " + "★".repeat(c.stars), "c-muted"), done ? api.sp("  ✓ solved", "c-ok") : "");
+    api.print(api.sp("◆ ", fam.mark), api.sp(c.id, "c-accent bold"), api.sp("  " + fam.label + "  " + "★".repeat(c.stars), "c-muted"), done ? api.sp("  ✓ solved", "c-ok") : "");
     api.blank();
     for (const line of c.prompt) api.print(api.sp(line, "c-text"));
     if (c.show) { api.blank(); api.print(api.sp(c.show[0] + ":", "c-muted")); api.print(api.sp("  " + c.show[1], "c-warn")); }
@@ -191,11 +193,11 @@ export function cafeCommands() {
       const already = solvedSet().has(id);
       markSolved(id);
       if (already) {
-        api.print(api.sp("✓ ", "c-ok"), api.sp("already brewed — still tastes great. ", "c-text"), api.sp(c.badge.emoji, ""));
+        api.print(api.sp("✓ ", "c-ok"), api.sp("already brewed — still counts.", "c-text"));
       } else {
         const n = solvedSet().size;
-        api.print(api.sp("✦ ", "c-warn spark"), api.sp("nice! ", "c-ok bold"), api.sp(c.id + " solved.  ", "c-text"), api.sp("badge: ", "c-muted"), api.sp(c.badge.emoji + " " + c.badge.name, "c-accent"));
-        if (n === total) api.print(api.sp("★ " + n + " / " + total + " — you cleared the whole café! ", "c-warn"), api.sp("☕✨ the night shift tips their hats (those that have them). come back soon.", "c-ok"));
+        api.print(api.sp("✓ ", "c-ok bold"), api.sp("nice — " + c.id + " solved.  ", "c-text"), api.sp("badge earned: ", "c-muted"), api.sp(c.badge.name, "c-accent"));
+        if (n === total) api.print(api.sp("★ " + n + " / " + total + " — you cleared the whole café.", "c-warn"), api.sp("  the night shift tips their hats (those that have them). come back soon.", "c-ok"));
         else api.print(api.sp("★ " + n + " / " + total + " solved", "c-warn"), api.sp("  ·  next: ", "c-muted"), api.kbd("ls"));
       }
     } else {
@@ -209,7 +211,7 @@ export function cafeCommands() {
     if (!c) { api.print(api.sp("hint for what? the board: ", "c-muted"), api.kbd("ls")); return; }
     const n = bumpHint(id, c.hints.length);
     api.print(api.sp("hint " + n + "/" + c.hints.length + ": ", "c-warn"), api.sp(c.hints[n - 1], "c-text"));
-    if (n >= c.hints.length) api.print(api.sp("that's all I've got — you've got this. ☕", "c-muted"));
+    if (n >= c.hints.length) api.print(api.sp("that's all I've got — you've got this.", "c-muted"));
     else api.print(api.sp("need more? ", "c-muted"), api.kbd("hint " + id));
   }
 
@@ -219,7 +221,7 @@ export function cafeCommands() {
     api.blank();
     for (const c of CHALLENGES) {
       const done = solved.has(c.id);
-      api.print(api.sp((done ? c.badge.emoji + " " : "🔒 "), ""), api.sp((done ? c.badge.name : "— — —").padEnd(18), done ? "c-accent" : "c-subtle"), api.sp(done ? "" : "(" + c.id + ")", "c-muted"));
+      api.print(api.sp(done ? "◆ " : "◇ ", done ? "c-accent" : "c-subtle"), api.sp((done ? c.badge.name : "— — —").padEnd(18), done ? "c-accent" : "c-subtle"), api.sp(done ? "" : "(" + c.id + ")", "c-muted"));
     }
     api.blank();
     progressLine(api);
