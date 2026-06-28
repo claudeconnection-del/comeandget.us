@@ -340,6 +340,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  clear  exit",
       "          present (others)  claim <code>  name <newname>",
       "          arcade: galaga  doom  snake  pong  breakout  tetris    ...and more.",
+      "(this box speaks PowerShell, bash, and DOS — type however you think.)",
       "(everything you NEED is in what this page does, not what it says.)",
     ],
     "?": () => CMD.help(),
@@ -511,10 +512,10 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     gpresult: () => "the policy that mattered did not apply. that is the whole story.",
 
     // system info
-    uname: () => "DreadOS NEO-WS01 #1337 cloud-only x86_64 watching/watching",
-    systeminfo: () => "NEO-WS01 — Windows 11 Pro 23H2 (22631.4317) — Entra joined — Intune — compliance: noncompliant",
+    uname: () => "DreadOS NEO-WS01 #1337 (Windows 11 underneath; GNU tools bolted on top) cloud-only x86_64 watching/watching",
+    systeminfo: () => ["NEO-WS01 — Windows 11 Pro 23H2 (22631.4317) — Entra joined — Intune — compliance: noncompliant", "Shells: PowerShell, bash, and cmd all answer here. we left every door open on purpose."],
     winver: () => CMD.systeminfo(),
-    neofetch: () => ["       neo@NEO-WS01", "       -----------", "  OS: DreadOS (cloud-only)", "  Uptime: forever", "  Shell: you, apparently", "  Mood: ominous"],
+    neofetch: () => ["       neo@NEO-WS01", "       -----------", "  OS: DreadOS (Windows 11 + GNU tools, cloud-only)", "  Uptime: forever", "  Shell: pwsh + bash + cmd (we left them all)", "  Mood: ominous"],
     screenfetch: () => CMD.neofetch(),
     env: () => "TENANT_ID=00000000-0000-0000-0000-000000000000\nAAD_JOINED=1\nINTUNE_MDM=1\n# the rest you have to earn",
     printenv: () => CMD.env(),
@@ -535,6 +536,16 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     du: () => "everything. it costs everything.",
     free: () => "we are not free. neither are you, now.",
     mount: () => "/dev/dread on / type honeypot (rw,watched,nosleep)",
+
+    // shells — the box answers to all of them, on purpose
+    pwsh: () => "you're already in PowerShell. (bash and cmd answer too — we're not picky.)",
+    powershell: () => CMD.pwsh(),
+    bash: () => "already wired. the GNU tools are all here — we wanted you comfortable while we watch.",
+    sh: () => CMD.bash(),
+    zsh: () => CMD.bash(),
+    cmd: () => "C:\\> is right there. so is bash. so is pwsh. we contain multitudes.",
+    "command.com": () => CMD.cmd(),
+    wsl: () => "no WSL layer — we dropped the coreutils straight onto the box. fewer walls between us and you.",
 
     // hint
     hint: () => "the device never stops calling home. read what it sends, decode what it carries, then dig where it points.",
@@ -630,6 +641,12 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     "let me out": "the exit is an email. you know the one.",
   };
 
+  // The box is canonically Windows (PS C:\>), but "us" dropped the GNU/Unix
+  // toolkit on top — so the first time someone reaches for a bash command, wink
+  // once that the cross-platform mix is on purpose, not an accident.
+  const UNIXISH = new Set("ls cat grep pwd find tree chmod chown rm mv cp ln touch head tail sudo su ssh scp man uname ifconfig ps df du free mount kill".split(" "));
+  let toolkitWinked = false;
+
   function run(line) {
     const trimmed = line.trim();
     if (!trimmed) return "";
@@ -642,8 +659,13 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     const rest = tokens.slice(1).join(" ");
     const fn = CMD[name];
     if (!fn) return `'${tokens[0]}' is not recognized as a command. try: help`;
-    const out = fn({ tokens: tokens.slice(1), rest, args: tokens.slice(1) });
-    return Array.isArray(out) ? out.join("\n") : out;
+    let out = fn({ tokens: tokens.slice(1), rest, args: tokens.slice(1) });
+    out = Array.isArray(out) ? out.join("\n") : out;
+    if (!toolkitWinked && UNIXISH.has(name)) {
+      toolkitWinked = true;
+      out = "(bash muscle memory? on a Windows box? we dropped the GNU tools straight in — no WSL, faster to watch you work. pwsh and cmd answer too.)" + (out ? "\n" + out : "");
+    }
+    return out;
   }
 
   // --- themes (recolour terminal + rain) ---
