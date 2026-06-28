@@ -964,7 +964,29 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     if (res) println(res);
   });
 
-  term.addEventListener("click", () => { if (!state.gaming) input.focus(); });
+  // Click the console to paste — terminal-style, on the primary mouse button. A
+  // click that selected text is a copy gesture, so leave it (and the selection)
+  // alone; touch just focuses, so the on-screen keyboard still opens. Clipboard
+  // reads need a user gesture + secure context — this pointerup is the gesture,
+  // and the site is https; if the read is blocked we just focus and no-op.
+  term.addEventListener("pointerup", (e) => {
+    if (state.gaming) return;
+    if (e.pointerType && e.pointerType !== "mouse") { input.focus(); return; }
+    if (e.button !== 0) return; // primary button only
+    const sel = window.getSelection && window.getSelection();
+    if (sel && !sel.isCollapsed && String(sel)) return; // selecting to copy — don't clobber
+    input.focus();
+    if (!(navigator.clipboard && navigator.clipboard.readText)) return;
+    navigator.clipboard.readText().then((clip) => {
+      const t = (clip || "").replace(/\r?\n/g, " ").trim(); // single-line input
+      if (!t) return;
+      const s = input.selectionStart ?? input.value.length;
+      const en = input.selectionEnd ?? input.value.length;
+      input.value = input.value.slice(0, s) + t + input.value.slice(en);
+      const caret = s + t.length;
+      input.setSelectionRange(caret, caret);
+    }).catch(() => {}); // clipboard denied / insecure context — focus only
+  });
 
   // run a command as if typed (echoes the prompt + prints the result). Used by
   // the vigil corner tap so a keyboard-less visitor can open the roster.

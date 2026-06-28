@@ -7,6 +7,18 @@ at every feature-implementation change, at every spec update, and before pushing
 
 ## Checkpoint log (newest first)
 
+### 2026-06-28 (terminal polish — left-click paste) ✅
+`site/root/js/shell.js`: the console now **pastes the clipboard on a primary-button click**
+(terminal-style). A click that produced a text selection is treated as a copy gesture and left
+alone; touch taps just focus (so the on-screen keyboard still opens); multi-line clipboard
+collapses to a single line for the one-line input. Replaces the old click→focus listener
+(focus preserved). Clipboard read is gated on the click gesture + secure context (site is https);
+if denied it silently focuses only. Verified on the local prod-ish server (`wrangler pages dev`):
+plain click pastes, selection-click preserves the copy, multi-line collapses, touch only focuses,
+zero console errors. **NEXT (planned, awaiting owner direction):** clean up the design-language
+mismatch — bash/Unix commands + `/root` FS under a PowerShell `PS C:\>` prompt on a Windows-11
+lore box (see session plan: commit-to-PowerShell / commit-to-bash / deliberate-hybrid).
+
 ### 2026-06-27 (code review — perf/security/secrets hardening) ✅
 Full review (branch `claude/comeandget-code-review-gix3gm`). Landed fixes; 32/32 smoke green
 (28 pass + 4 secret-gated, all 32 green with local `.dev.vars` + `PUZZLE_ANSWER`).
