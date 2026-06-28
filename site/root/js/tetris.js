@@ -8,6 +8,8 @@ export function startTetris({ term, input, flare, surge, onExit, palette, audio 
     if (y === 0) return P.hud || "#b9b29a";
     switch (ch) {
       case "#": return P.wallEdge;
+      case "·": return P.wallEdge;          // faint column grid (empty cells)
+      case ":": return P.hud || "#b9b29a";  // ghost: where the piece will land
       case "I": return P.bullet;
       case "O": return P.exit;
       case "T": return P.boss;
@@ -88,8 +90,20 @@ export function startTetris({ term, input, flare, surge, onExit, palette, audio 
   const timer = setInterval(() => { if (!over) { drop(); render(); } }, 520);
 
   function render() {
-    const g = well.map((row) => row.map((c) => c || " "));
-    if (cur) cur.cells.forEach(([x, y]) => { if (cur.oy + y >= 0 && g[cur.oy + y]) g[cur.oy + y][cur.ox + x] = cur.type; });
+    // empty cells get a faint dot so every column is countable on the grid
+    const g = well.map((row) => row.map((c) => c || "·"));
+    if (cur) {
+      // ghost piece: project straight down to the resting row so it's obvious
+      // which columns the piece occupies and exactly where it will land
+      let gy = cur.oy;
+      while (!collide(cur.cells, cur.ox, gy + 1)) gy++;
+      cur.cells.forEach(([x, y]) => {
+        const yy = gy + y, xx = cur.ox + x;
+        if (yy >= 0 && g[yy] && g[yy][xx] === "·") g[yy][xx] = ":";
+      });
+      // the live piece sits on top of its ghost
+      cur.cells.forEach(([x, y]) => { if (cur.oy + y >= 0 && g[cur.oy + y]) g[cur.oy + y][cur.ox + x] = cur.type; });
+    }
     const rows = g.map((row) => "#" + row.join("") + "#");
     rows.push("#".repeat(W + 2));
     const hud = ` TETRIS   score ${score}   lines ${lines}   [←→] move [↑] rotate [↓/space] drop [q] quit`;
