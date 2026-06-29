@@ -174,6 +174,28 @@ Never heavy-handed, never spoil the ARG. Keep it inviting first, uncanny second.
 - Deploy: commit + push to `main` → GitHub Actions runs CI then `wrangler pages deploy`. Confirm
   live: `curl -s -o /dev/null -w "%{http_code}" https://comeandget.us/cafe/` → 200.
 
-## 7. Out of scope / future
+## 7. Polish round (shipped after v2 — 2026-06-29)
+A follow-up motion/feel + content pass, all live:
+- **Idle clicker — "Brew Tycoon"** (`games/idle.js`): 5th arcade game. Tap/space to brew, six
+  auto-brewers (1–6 to buy), persistent (`cafe.idle`) with an 8h "while you were away" catch-up.
+  Full 4K support (glow mug, bean bursts, auto-zoom). Registered in `games/index.js`; aliases
+  `brew`/`clicker`.
+- **Dark theme is now dark periwinkle** (was Rosé Pine) so it reads as the cozy twin of the light
+  periwinkle — `html[data-theme="dark"]` in `cafe.css`, plus `theme.js` + `index.html` theme-color.
+- **Games restore the pre-launch window size** — `host.js` only auto-zooms a 4K game if you weren't
+  already maximized, and only un-zooms on quit if it was the one that zoomed (`wasZoomed`/`autoZoomed`).
+- **Easy/chill tuning** — Tetris: reset `dropAcc` on spawn so every piece starts at the same top row
+  (fixed "fell from different heights"), slower gravity (`max(200, 950-(lvl-1)*50)`), ramp every 12
+  lines. Snake/Breakout/Pong: slower speeds, bigger paddle, lazier AI.
+- **Ambience mode polish** — minimalist defaults (`cafe.amb` = gentle particles, low glow); a corner
+  **adjustments panel** (particles/glow/drift, persisted, live); the candlelight is now soft drifting
+  **lava-lamp blobs** (heavy blur → no banding); minimize **fades in smoothly** (ambient opacity +
+  motes ease in, scene settles darker).
+- **Smoother transitions** — the `/root→/cafe` view-transition image-pair now shares the group's
+  duration/easing (no pop); the dawn glow waits for `pagereveal`'s transition to finish.
+- **Perf** — ambient animations `animation-play-state: paused` unless minimized (the blurred blobs
+  are costly); Snake grid-dots and Tetris grid-lines batched into one path/draw call.
+
+## 8. Out of scope / future
 Sound/music for games; a shareable progress card; more challenges; a real fullscreen mode; mobile
-game controls polish. None block this round.
+game controls polish; idle prestige/ascension. None block.

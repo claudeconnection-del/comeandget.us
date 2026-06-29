@@ -6,6 +6,7 @@ import { snake } from "./snake.js";
 import { tetris } from "./tetris.js";
 import { breakout } from "./breakout.js";
 import { pong } from "./pong.js";
+import { idle } from "./idle.js";
 import { highScore, is4kUnlocked, fourkPref, setFourk, fourkDefault } from "./store.js";
 
 const GAMES = [
@@ -13,6 +14,7 @@ const GAMES = [
   { id: "snake", make: snake, controls: "← ↑ → ↓ / WASD · q quit", blurb: "eat the bean" },
   { id: "breakout", make: breakout, controls: "← → move · space serve · q quit", blurb: "break the wall" },
   { id: "pong", make: pong, controls: "↑ ↓ / W S move · q quit", blurb: "first to five" },
+  { id: "idle", make: idle, controls: "tap / space to brew · 1–6 buy · q quit", blurb: "brew tycoon" },
 ];
 
 // did the player ask for/against 4K on this launch?

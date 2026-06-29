@@ -47,7 +47,11 @@ export function runGame({ name, create, api, controls = "← → move · q quit"
   stage.appendChild(canvas);
   win.appendChild(stage);
   consoleEl.style.display = "none";
-  if (zoom) document.dispatchEvent(new CustomEvent("cafe:zoom", { detail: { on: true } }));
+  // 4K games want room: auto-zoom only if the player wasn't already zoomed, and
+  // remember so we can put the window back exactly how we found it on quit.
+  const wasZoomed = win.classList.contains("zoomed");
+  const autoZoomed = zoom && !wasZoomed;
+  if (autoZoomed) document.dispatchEvent(new CustomEvent("cafe:zoom", { detail: { on: true } }));
 
   const ctx = canvas.getContext("2d");
   let palette = readPalette();
@@ -142,7 +146,8 @@ export function runGame({ name, create, api, controls = "← → move · q quit"
     canvas.removeEventListener("pointermove", onPointer);
     stage.remove();
     consoleEl.style.display = "";
-    if (zoom) document.dispatchEvent(new CustomEvent("cafe:zoom", { detail: { on: false } }));
+    // only undo a zoom WE applied — if the player was already maximized, leave it
+    if (autoZoomed) document.dispatchEvent(new CustomEvent("cafe:zoom", { detail: { on: false } }));
     api.focus();
   }
 

@@ -65,6 +65,7 @@ export function tetris(host, { fancy = false } = {}) {
     cur = makePiece(nextType);
     nextType = take();
     softDrop = false;
+    dropAcc = 0; // start each piece at the very top — no leftover fall offset
     if (collide(cur, cur.x, cur.y)) over = true;
   }
   function reset() {
@@ -77,7 +78,8 @@ export function tetris(host, { fancy = false } = {}) {
   }
   reset();
 
-  function interval() { return softDrop ? 35 : Math.max(70, 800 - (level - 1) * 65); }
+  // chill / easy: a relaxed fall, a gentle ramp, and a forgiving speed floor.
+  function interval() { return softDrop ? 45 : Math.max(200, 950 - (level - 1) * 50); }
 
   function spawnRowParticles(ry, colors) {
     const { cell, ox, oy } = lastGeom;
@@ -108,7 +110,7 @@ export function tetris(host, { fancy = false } = {}) {
       const n = full.length;
       lines += n;
       score += SCORE[n] * level;
-      level = 1 + Math.floor(lines / 10);
+      level = 1 + Math.floor(lines / 12); // ramp up a little more gently
       addLines(n, n === 4);
     }
     spawn();
@@ -192,10 +194,12 @@ export function tetris(host, { fancy = false } = {}) {
       rr(ctx, ox - 6, oy - 6, boardW + 12, boardH + 12, 12); ctx.fill();
       ctx.fillStyle = palette.bg;
       rr(ctx, ox, oy, boardW, boardH, 6); ctx.fill();
-      // grid lines
+      // grid lines — one batched path/stroke
       ctx.strokeStyle = palette.line; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
-      for (let x = 1; x < COLS; x++) { ctx.beginPath(); ctx.moveTo(ox + x * cell, oy); ctx.lineTo(ox + x * cell, oy + boardH); ctx.stroke(); }
-      for (let y = 1; y < ROWS; y++) { ctx.beginPath(); ctx.moveTo(ox, oy + y * cell); ctx.lineTo(ox + boardW, oy + y * cell); ctx.stroke(); }
+      ctx.beginPath();
+      for (let x = 1; x < COLS; x++) { ctx.moveTo(ox + x * cell, oy); ctx.lineTo(ox + x * cell, oy + boardH); }
+      for (let y = 1; y < ROWS; y++) { ctx.moveTo(ox, oy + y * cell); ctx.lineTo(ox + boardW, oy + y * cell); }
+      ctx.stroke();
       ctx.globalAlpha = 1;
 
       // settled blocks

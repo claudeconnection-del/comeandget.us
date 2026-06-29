@@ -1,4 +1,4 @@
-// theme.js — Rosé Pine dark (default) ⇄ periwinkle light, persisted in localStorage.
+// theme.js — dark periwinkle (default) ⇄ light periwinkle, persisted in localStorage.
 // Defaults to dark, but honors prefers-color-scheme: light on a first visit.
 const KEY = "cafe.theme";
 
@@ -7,7 +7,7 @@ function paint(t) {
   const b = document.getElementById("themebtn");
   if (b) b.textContent = t === "dark" ? "☾" : "☀";
   const m = document.querySelector('meta[name="theme-color"]');
-  if (m) m.setAttribute("content", t === "dark" ? "#191724" : "#f2f3fc");
+  if (m) m.setAttribute("content", t === "dark" ? "#161528" : "#f2f3fc");
 }
 
 export function current() { return document.documentElement.getAttribute("data-theme") || "dark"; }

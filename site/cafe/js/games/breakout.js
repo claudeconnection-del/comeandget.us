@@ -17,10 +17,10 @@ export function breakout(host) {
     for (let r = 0; r < BR; r++) for (let c = 0; c < BC; c++) {
       bricks.push({ x: margin + c * bw, y: margin + 28 + r * bh, w: bw - 4, h: bh - 4, row: r, alive: true });
     }
-    paddle = { w: Math.max(70, w * 0.16), h: Math.max(10, h * 0.022), x: w / 2, y: h - margin };
+    paddle = { w: Math.max(96, w * 0.21), h: Math.max(10, h * 0.022), x: w / 2, y: h - margin }; // chill: a generous paddle
   }
   function resetBall() {
-    ball = { x: paddle.x, y: paddle.y - 14, r: Math.max(5, Math.min(host.width, host.height) * 0.012), vx: 0, vy: 0, speed: Math.max(0.28, host.height * 0.0006) };
+    ball = { x: paddle.x, y: paddle.y - 14, r: Math.max(5, Math.min(host.width, host.height) * 0.012), vx: 0, vy: 0, speed: Math.max(0.24, host.height * 0.00052) };
     launched = false;
   }
   function reset() {
@@ -84,7 +84,7 @@ export function breakout(host) {
           const ox = Math.min(ball.x + ball.r - b.x, b.x + b.w - (ball.x - ball.r));
           const oy = Math.min(ball.y + ball.r - b.y, b.y + b.h - (ball.y - ball.r));
           if (ox < oy) ball.vx *= -1; else ball.vy *= -1;
-          ball.speed = Math.min(ball.speed * 1.012, host.height * 0.0014);
+          ball.speed = Math.min(ball.speed * 1.007, host.height * 0.0011);
           const sp = Math.hypot(ball.vx, ball.vy) || 1;
           ball.vx = ball.vx / sp * ball.speed; ball.vy = ball.vy / sp * ball.speed;
           break;

@@ -11,7 +11,7 @@ export function pong(host) {
   function dims() { return { w: host.width, h: host.height, pw: Math.max(9, host.width * 0.014), ph: Math.max(54, host.height * 0.18) }; }
   function serve(dir) {
     const { w, h } = dims();
-    const speed = Math.max(0.32, h * 0.0007);
+    const speed = Math.max(0.28, h * 0.0006);
     const a = (Math.random() - 0.5) * 0.6;
     ball = { x: w / 2, y: h / 2, r: Math.max(5, Math.min(w, h) * 0.012), vx: dir * speed * Math.cos(a), vy: speed * Math.sin(a), speed };
   }
@@ -39,9 +39,10 @@ export function pong(host) {
       if (up) pl -= pv;
       if (down) pl += pv;
       pl = Math.max(ph / 2, Math.min(h - ph / 2, pl));
-      // calm AI: tracks the ball with a capped speed (beatable)
-      const aiv = h * 0.0012 * dt;
-      if (ai < ball.y - 8) ai += aiv; else if (ai > ball.y + 8) ai -= aiv;
+      // calm AI: tracks the ball lazily with a low cap + a wide dead zone, so
+      // the house is easy to beat
+      const aiv = h * 0.00085 * dt;
+      if (ai < ball.y - 22) ai += aiv; else if (ai > ball.y + 22) ai -= aiv;
       ai = Math.max(ph / 2, Math.min(h - ph / 2, ai));
 
       ball.x += ball.vx * dt; ball.y += ball.vy * dt;
@@ -52,7 +53,7 @@ export function pong(host) {
       // left paddle
       if (ball.vx < 0 && ball.x - ball.r <= px && Math.abs(ball.y - pl) <= ph / 2 + ball.r) {
         const rel = (ball.y - pl) / (ph / 2);
-        ball.speed = Math.min(ball.speed * 1.05, h * 0.0016);
+        ball.speed = Math.min(ball.speed * 1.035, h * 0.0013);
         ball.vx = Math.abs(ball.speed * Math.cos(rel * 0.9));
         ball.vy = ball.speed * Math.sin(rel * 0.9);
         ball.x = px + ball.r;
@@ -61,7 +62,7 @@ export function pong(host) {
       // right paddle (house)
       if (ball.vx > 0 && ball.x + ball.r >= ax && Math.abs(ball.y - ai) <= ph / 2 + ball.r) {
         const rel = (ball.y - ai) / (ph / 2);
-        ball.speed = Math.min(ball.speed * 1.05, h * 0.0016);
+        ball.speed = Math.min(ball.speed * 1.035, h * 0.0013);
         ball.vx = -Math.abs(ball.speed * Math.cos(rel * 0.9));
         ball.vy = ball.speed * Math.sin(rel * 0.9);
         ball.x = ax - ball.r;

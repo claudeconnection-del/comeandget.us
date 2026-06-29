@@ -23,7 +23,7 @@ export function snake(host) {
     const cx = cols >> 1, cy = rows >> 1;
     body = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
     dir = { x: 1, y: 0 }; queue = [];
-    score = 0; over = false; acc = 0; step = 130;
+    score = 0; over = false; acc = 0; step = 155; // chill: an easy, unhurried pace
     placeFood();
   }
   reset();
@@ -69,7 +69,7 @@ export function snake(host) {
         }
         body.unshift(head);
         if (head.x === food.x && head.y === food.y) {
-          score += 10; step = Math.max(60, step - 3);
+          score += 10; step = Math.max(95, step - 2);
           if (host.fancy && !host.reduced) { fx.burst(ox() + (food.x + 0.5) * cell, oy() + (food.y + 0.5) * cell, host.palette.love, 12); fx.shakeAdd(4); }
           placeFood();
         } else body.pop();
@@ -83,9 +83,14 @@ export function snake(host) {
       // board
       ctx.fillStyle = palette.surface;
       rr(ctx, bx - 6, by - 6, cols * cell + 12, rows * cell + 12, 14);
-      // faint grid dots
+      // faint grid dots — batched into a single path/fill (one draw call, not cols×rows)
       ctx.fillStyle = palette.line; ctx.globalAlpha = 0.5;
-      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) { ctx.beginPath(); ctx.arc(bx + (x + 0.5) * cell, by + (y + 0.5) * cell, 1, 0, 7); ctx.fill(); }
+      ctx.beginPath();
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+        const dx = bx + (x + 0.5) * cell, dy = by + (y + 0.5) * cell;
+        ctx.moveTo(dx + 1, dy); ctx.arc(dx, dy, 1, 0, 7);
+      }
+      ctx.fill();
       ctx.globalAlpha = 1;
       // food
       ctx.save();

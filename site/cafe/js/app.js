@@ -13,14 +13,29 @@ const { api } = term;
 initWindow(api);
 
 // arriving from /root via the `cafe` command: the window itself morphs in via a
-// cross-document view transition. Here we just breathe a soft warm "dawn" glow on
-// the window as it settles — no full-screen wash, so it lands cleanly in dark.
-// (CSS handles reduced-motion.)
+// cross-document view transition. We breathe a soft warm "dawn" glow on the
+// window — but only once the morph has SETTLED, so it doesn't flicker under the
+// transition overlay. (CSS handles reduced-motion.)
 try {
   if (new URLSearchParams(location.search).get("from") === "root") {
-    const win = document.querySelector(".window");
-    if (win) { win.classList.add("arriving"); setTimeout(() => win.classList.remove("arriving"), 1300); }
     if (history.replaceState) history.replaceState(null, "", location.pathname); // don't replay on refresh
+    let glowed = false;
+    const dawnGlow = () => {
+      if (glowed) return; glowed = true;
+      const win = document.querySelector(".window");
+      if (!win) return;
+      win.classList.add("arriving");
+      setTimeout(() => win.classList.remove("arriving"), 1300);
+    };
+    if ("onpagereveal" in window) {
+      window.addEventListener("pagereveal", (e) => {
+        if (e && e.viewTransition && e.viewTransition.finished) e.viewTransition.finished.then(dawnGlow, dawnGlow);
+        else dawnGlow();
+      }, { once: true });
+      setTimeout(dawnGlow, 800); // fallback if pagereveal doesn't fire
+    } else {
+      dawnGlow();
+    }
   }
 } catch {}
 
@@ -41,7 +56,7 @@ const meta = {
     api.print(api.sp("  decode <s>    base64 -d <s>    rot13 <s>", "c-text"));
     api.blank();
     api.print(api.sp("arcade", "c-accent bold"), api.sp("  (take a break)", "c-muted"));
-    api.print(api.sp("  games", "c-text"), api.sp("                the lineup — tetris · snake · breakout · pong", "c-muted"));
+    api.print(api.sp("  games", "c-text"), api.sp("                the lineup — tetris · snake · breakout · pong · idle", "c-muted"));
     api.print(api.sp("  4k", "c-text"), api.sp("                   toggle the glow-up once you've unlocked it", "c-muted"));
     api.blank();
     api.print(api.sp("look & feel", "c-accent bold"));
@@ -69,6 +84,6 @@ term.register(meta);
 term.register(cafeCommands());
 term.register(toolCommands());
 term.register(gameCommands());
-term.alias({ "?": "help", commands: "help", menu: "ls", cls: "clear", quit: "exit", q: "exit", arcade: "games", play: "games", blocks: "tetris", hd: "4k" });
+term.alias({ "?": "help", commands: "help", menu: "ls", cls: "clear", quit: "exit", q: "exit", arcade: "games", play: "games", blocks: "tetris", hd: "4k", brew: "idle", clicker: "idle" });
 
 api.focus();
