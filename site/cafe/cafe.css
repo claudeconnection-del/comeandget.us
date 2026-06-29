@@ -203,7 +203,12 @@ body.minimized .ambient .motes { opacity: 1; }
   backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
   cursor: default;
   font-family: var(--font-ui); font-size: 12px; color: var(--muted);
+  transition: opacity 0.7s ease;
 }
+/* after the first interaction, the collapsed pill fades to barely-there when idle;
+   any hover/focus brings it right back */
+.ambient-controls.ghosted { opacity: 0.16; }
+.ambient-controls.ghosted:hover, .ambient-controls.ghosted:focus-within { opacity: 1; }
 .ambient-controls .ac-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   width: 100%; padding: 10px 14px; cursor: pointer;

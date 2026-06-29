@@ -111,18 +111,33 @@ export function initWindow(api) {
     chev.textContent = acOpen ? "▾" : "▸";
   };
   applyOpen();
-  toggle.addEventListener("click", (e) => { e.stopPropagation(); acOpen = !acOpen; settings.open = acOpen; saveAmb(settings); applyOpen(); });
 
+  // ghost the collapsed pill after 5s of no interaction — but only once the user
+  // has interacted at least once (hover or expand), so it stays fully visible and
+  // discoverable until then. Any interaction (or re-opening the scene) wakes it.
+  let acInteracted = false;
+  let ghostTimer = 0;
+  const scheduleGhost = () => {
+    clearTimeout(ghostTimer);
+    controls.classList.remove("ghosted");
+    if (!acInteracted) return;
+    ghostTimer = setTimeout(() => { if (!acOpen) controls.classList.add("ghosted"); }, 5000);
+  };
+  const acInteract = () => { acInteracted = true; scheduleGhost(); };
+
+  toggle.addEventListener("click", (e) => { e.stopPropagation(); acOpen = !acOpen; settings.open = acOpen; saveAmb(settings); applyOpen(); acInteract(); });
+  controls.addEventListener("pointerenter", acInteract);
+  controls.addEventListener("pointerleave", scheduleGhost);
   // fiddling with the panel must never dismiss the ambient view
   controls.addEventListener("click", (e) => e.stopPropagation());
-  controls.addEventListener("pointerdown", (e) => e.stopPropagation());
+  controls.addEventListener("pointerdown", (e) => { e.stopPropagation(); acInteract(); });
   ambient.appendChild(controls);
 
   document.body.appendChild(ambient);
 
   const setMin = (on) => {
     document.body.classList.toggle("minimized", on);
-    if (!on) api.focus();
+    if (on) scheduleGhost(); else api.focus(); // re-arm the idle fade each time we rest
   };
   if (min) min.addEventListener("click", () => setMin(!document.body.classList.contains("minimized")));
   ambient.addEventListener("click", () => setMin(false));
