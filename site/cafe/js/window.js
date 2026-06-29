@@ -5,8 +5,9 @@
 //   🟢 zoom      → grows the window larger within the browser (not OS fullscreen)
 // The arcade can ask for room via a `cafe:zoom` event (4K games auto-zoom).
 const AKEY = "cafe.amb";
-// minimalist by default — gentle particles, a soft low glow, an unhurried drift
-const AMB_DEFAULTS = { count: 12, glow: 20, drift: 38 };
+// minimalist by default — gentle particles, a soft low glow, an unhurried drift,
+// and the controls tucked away (open:false) until you ask for them
+const AMB_DEFAULTS = { count: 12, glow: 20, drift: 38, open: false };
 function loadAmb() { try { return Object.assign({}, AMB_DEFAULTS, JSON.parse(localStorage.getItem(AKEY) || "{}")); } catch { return { ...AMB_DEFAULTS }; } }
 function saveAmb(s) { try { localStorage.setItem(AKEY, JSON.stringify(s)); } catch {} }
 
@@ -66,13 +67,21 @@ export function initWindow(api) {
   hint.textContent = "the café is resting — tap to come back";
   ambient.appendChild(hint);
 
-  // the corner adjustments panel — tune the ambience to taste (persisted)
+  // the corner adjustments panel — collapsed by default, with a show/hide toggle
   const controls = document.createElement("div");
   controls.className = "ambient-controls";
-  const title = document.createElement("div");
-  title.className = "ac-title";
-  title.textContent = "ambience";
-  controls.appendChild(title);
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "ac-toggle";
+  const tlabel = document.createElement("span");
+  tlabel.textContent = "ambience";
+  const chev = document.createElement("span");
+  chev.className = "ac-chev";
+  chev.setAttribute("aria-hidden", "true");
+  toggle.appendChild(tlabel);
+  toggle.appendChild(chev);
+  const body = document.createElement("div");
+  body.className = "ac-body";
   const addSlider = (label, key, min2, max2) => {
     const row = document.createElement("label");
     row.className = "ac-row";
@@ -87,11 +96,23 @@ export function initWindow(api) {
     });
     row.appendChild(span);
     row.appendChild(inp);
-    controls.appendChild(row);
+    body.appendChild(row);
   };
   addSlider("particles", "count", 0, 40);
   addSlider("glow", "glow", 0, 100);
   addSlider("drift", "drift", 0, 100);
+  controls.appendChild(toggle);
+  controls.appendChild(body);
+
+  let acOpen = !!settings.open; // default collapsed
+  const applyOpen = () => {
+    controls.classList.toggle("open", acOpen);
+    toggle.setAttribute("aria-expanded", acOpen ? "true" : "false");
+    chev.textContent = acOpen ? "▾" : "▸";
+  };
+  applyOpen();
+  toggle.addEventListener("click", (e) => { e.stopPropagation(); acOpen = !acOpen; settings.open = acOpen; saveAmb(settings); applyOpen(); });
+
   // fiddling with the panel must never dismiss the ambient view
   controls.addEventListener("click", (e) => e.stopPropagation());
   controls.addEventListener("pointerdown", (e) => e.stopPropagation());
