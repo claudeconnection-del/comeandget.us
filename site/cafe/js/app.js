@@ -1,7 +1,7 @@
 // app.js — wire the terminal: theme, meta commands, the CTF, the tools, the
 // arcade, and the live window buttons.
 import { createTerminal } from "./shell.js";
-import { initTheme, set as setTheme, current as curTheme } from "./theme.js";
+import { initTheme, set as setTheme, current as curTheme, cycle as cycleTheme } from "./theme.js";
 import { cafeCommands } from "./ctf.js";
 import { toolCommands } from "./tools.js";
 import { gameCommands } from "./games/index.js";
@@ -38,7 +38,7 @@ const meta = {
     api.print(api.sp("  load <code>", "c-text"), api.sp("          restore from a save code or link", "c-muted"));
     api.blank();
     api.print(api.sp("look & feel", "c-accent bold"));
-    api.print(api.sp("  theme dark|light    clear", "c-text"), api.sp("     (or tap the ☾/☀ and the dots up top)", "c-muted"));
+    api.print(api.sp("  theme dark|light|classic|mono    clear", "c-text"), api.sp("   (or tap the swatch up top to cycle)", "c-muted"));
     api.blank();
     api.print(api.sp("new here? try ", "c-muted"), api.kbd("open welcome-mat"), api.sp(" then ", "c-muted"), api.kbd("ls"), api.sp(". have fun.", "c-muted"));
   },
@@ -51,9 +51,9 @@ const meta = {
   clear: () => api.clearScreen(),
   theme: ({ argv }) => {
     const a = (argv[0] || "").toLowerCase();
-    if (a === "dark" || a === "light") { setTheme(a); api.print(api.sp("theme: " + a, "c-accent")); }
-    else if (!a) { const nx = curTheme() === "dark" ? "light" : "dark"; setTheme(nx); api.print(api.sp("theme: " + nx, "c-accent"), api.sp("  (you can also tap ☾/☀ up top)", "c-muted")); }
-    else api.print(api.sp("usage: ", "c-muted"), api.kbd("theme dark|light"));
+    if (["dark", "light", "classic", "mono"].includes(a)) { setTheme(a); api.print(api.sp("theme: " + a, "c-accent")); }
+    else if (!a) { const nx = cycleTheme(); api.print(api.sp("theme: " + nx, "c-accent"), api.sp("   ·  also try ", "c-muted"), api.kbd("theme classic"), api.sp(" or ", "c-muted"), api.kbd("theme mono")); }
+    else api.print(api.sp("usage: ", "c-muted"), api.kbd("theme dark|light|classic|mono"));
   },
   exit: () => api.print(api.sp("there's no leaving a café this cozy — just close the tab when you're done.", "c-muted")),
 };
