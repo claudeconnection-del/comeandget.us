@@ -6,6 +6,7 @@ import { cafeCommands } from "./ctf.js";
 import { toolCommands } from "./tools.js";
 import { gameCommands } from "./games/index.js";
 import { initWindow } from "./window.js";
+import { saveCommands, autoloadFromHash } from "./save.js";
 
 initTheme();
 const term = createTerminal();
@@ -32,6 +33,10 @@ const meta = {
     api.print(api.sp("  games", "c-text"), api.sp("                the lineup — tetris · snake · breakout · pong · idle", "c-muted"));
     api.print(api.sp("  4k", "c-text"), api.sp("                   toggle the glow-up once you've unlocked it", "c-muted"));
     api.blank();
+    api.print(api.sp("carry your progress", "c-accent bold"), api.sp("  (no account needed)", "c-muted"));
+    api.print(api.sp("  save", "c-text"), api.sp("                 get a save code + bookmarkable link", "c-muted"));
+    api.print(api.sp("  load <code>", "c-text"), api.sp("          restore from a save code or link", "c-muted"));
+    api.blank();
     api.print(api.sp("look & feel", "c-accent bold"));
     api.print(api.sp("  theme dark|light    clear", "c-text"), api.sp("     (or tap the ☾/☀ and the dots up top)", "c-muted"));
     api.blank();
@@ -57,6 +62,8 @@ term.register(meta);
 term.register(cafeCommands());
 term.register(toolCommands());
 term.register(gameCommands());
-term.alias({ "?": "help", commands: "help", menu: "ls", cls: "clear", quit: "exit", q: "exit", arcade: "games", play: "games", blocks: "tetris", hd: "4k", brew: "idle", clicker: "idle" });
+term.register(saveCommands());
+term.alias({ "?": "help", commands: "help", menu: "ls", cls: "clear", quit: "exit", q: "exit", arcade: "games", play: "games", blocks: "tetris", hd: "4k", brew: "idle", clicker: "idle", export: "save", import: "load", restore: "load" });
 
+autoloadFromHash(api); // a bookmarked save link (#s=…) restores progress on open
 api.focus();
