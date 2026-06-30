@@ -12,33 +12,6 @@ const term = createTerminal();
 const { api } = term;
 initWindow(api);
 
-// arriving from /root via the `cafe` command: the window itself morphs in via a
-// cross-document view transition. We breathe a soft warm "dawn" glow on the
-// window — but only once the morph has SETTLED, so it doesn't flicker under the
-// transition overlay. (CSS handles reduced-motion.)
-try {
-  if (new URLSearchParams(location.search).get("from") === "root") {
-    if (history.replaceState) history.replaceState(null, "", location.pathname); // don't replay on refresh
-    let glowed = false;
-    const dawnGlow = () => {
-      if (glowed) return; glowed = true;
-      const win = document.querySelector(".window");
-      if (!win) return;
-      win.classList.add("arriving");
-      setTimeout(() => win.classList.remove("arriving"), 1300);
-    };
-    if ("onpagereveal" in window) {
-      window.addEventListener("pagereveal", (e) => {
-        if (e && e.viewTransition && e.viewTransition.finished) e.viewTransition.finished.then(dawnGlow, dawnGlow);
-        else dawnGlow();
-      }, { once: true });
-      setTimeout(dawnGlow, 800); // fallback if pagereveal doesn't fire
-    } else {
-      dawnGlow();
-    }
-  }
-} catch {}
-
 const meta = {
   help: () => {
     api.print(api.sp("byte café", "welcome"), api.sp(" — a cozy capture-the-flag playground", "c-muted"));

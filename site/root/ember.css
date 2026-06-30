@@ -265,17 +265,20 @@ main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
 
 @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
-/* the `cafe` crossing: the dread console is a shared element with /cafe's window
-   (same view-transition-name), so on navigation the browser morphs the frame —
-   staying put + restyling if the boxes match, smoothly resizing if they differ.
-   Dark → dark, no flash. Where view transitions aren't supported, it's just an
-   instant navigation. The matching name + opt-in live on /cafe too. */
-@view-transition { navigation: auto; }
-main { view-transition-name: cafe-terminal; }
+/* the `cafe` crossing: on the way over we fade the whole page to the café's own
+   background colour, so the navigation lands seamlessly — no hard cut. The café
+   then rises in from that same colour. The veil colour is set in JS to match the
+   café's saved theme (dark default / light), so the seam is invisible. */
+.leaving {
+  position: fixed; inset: 0; z-index: 50; pointer-events: none;
+  opacity: 0; transition: opacity 0.28s ease;
+}
+.leaving.on { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .cursor { animation: none; }
   main::before { animation: none; opacity: 0.14; }
   .vigil-chip { transition: none; }
   #vigil-drift { display: none; }
+  .leaving { transition-duration: 0.1s; }
 }

@@ -954,12 +954,18 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   // cafe: cross over to Byte Café — the warm twin — on a sunrise. the dread
   // softens into dawn, then the door opens onto the cozy side.
   CMD.cafe = () => {
-    // a soft warm flare on the way out; the dread console then morphs into the
-    // café window via a cross-document view transition (see ember.css/cafe.css).
+    // fade the page to the café's own background, then cross over. Deterministic
+    // and reliable — no view-transition timing to miss. The veil colour matches
+    // the café's saved theme so the seam between pages is invisible.
     const rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (flare) flare(800);
-    surge(600);
-    setTimeout(() => { location.href = "/cafe/?from=root"; }, rm ? 120 : 420);
+    let bg = "#161528";
+    try { if (localStorage.getItem("cafe.theme") === "light") bg = "#f2f3fc"; } catch {}
+    const veil = document.createElement("div");
+    veil.className = "leaving";
+    veil.style.background = bg;
+    document.body.appendChild(veil);
+    requestAnimationFrame(() => veil.classList.add("on"));
+    setTimeout(() => { location.href = "/cafe/"; }, rm ? 90 : 300);
     return "the embers settle, and something warmer kindles. the rain thins to morning. (opening Byte Café — the door's unlocked, the coffee's hot.)";
   };
   CMD.bytecafe = () => CMD.cafe();

@@ -231,34 +231,15 @@ body.minimized .ambient .motes { opacity: 1; }
   color: var(--muted); font-family: var(--font-ui); font-size: 13px; letter-spacing: 0.02em;
 }
 
-/* ── the /root → /cafe crossing ──────────────────────────────────────
-   The terminal frame is a shared element across both pages (same
-   view-transition-name), so the dread console smoothly resizes + restyles into
-   this window — and if the boxes ever matched, it would simply stay put and
-   crossfade style. Dark → dark, so no full-screen flash. A soft warm glow
-   breathes on the window as it settles: a gentle dawn, not a blow-out. */
-@view-transition { navigation: auto; }
-.window { view-transition-name: cafe-terminal; }
-/* The frame's crossfade and its resize must run with the SAME duration + easing,
-   or the new window snaps to full opacity before the box finishes moving (the
-   "jumpy" pop). Lock them together; ease the page backdrop on the same curve. */
-::view-transition-group(cafe-terminal),
-::view-transition-old(cafe-terminal),
-::view-transition-new(cafe-terminal),
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 620ms;
-  animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1);
-}
-/* keep the morphing frame's contents pinned top-left so they don't drift/scale
-   unevenly as the box resizes */
-::view-transition-old(cafe-terminal),
-::view-transition-new(cafe-terminal) { height: 100%; object-fit: cover; overflow: clip; }
-.window.arriving { animation: dawn-settle 1200ms ease both; }
-@keyframes dawn-settle {
-  0%   { box-shadow: var(--shadow); }
-  50%  { box-shadow: var(--shadow), 0 0 60px color-mix(in srgb, var(--warn) 50%, transparent); }
-  100% { box-shadow: var(--shadow); }
+/* ── the /root → /cafe crossing (plays on every café load) ───────────
+   A deterministic, API-free reveal: the window gently rises in from the page's
+   own dark background. Paired with /root fading out to this same background on
+   the way over, the crossing reads as one smooth fade — no hard cut, no flash,
+   and identical on the first load and every load after. */
+.window { animation: cafe-rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes cafe-rise-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.992); }
+  to   { opacity: 1; transform: none; }
 }
 
 @media (max-width: 560px) {
@@ -270,7 +251,6 @@ body.minimized .ambient .motes { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .spark { animation: none; }
   .ambient .mote, .ambient .blob { animation: none; }
-  .window.arriving { animation: none; }
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 1ms !important; }
+  .window { animation: none; }
   * { transition: none !important; }
 }
