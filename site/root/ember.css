@@ -143,6 +143,10 @@ main.surge::before { animation-duration: 0.5s; opacity: 0.34; }
   padding: 2rem;
 }
 
+/* the shell prints the operator note into the terminal on boot; the static
+   copy stays parked out of the flow so it never doubles up under #term */
+.opnote { display: none; }
+
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
