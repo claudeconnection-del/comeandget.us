@@ -144,6 +144,69 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   };
   const RWORDS = ["come", "and", "get", "us"];
 
+  // --- the reckoning: canaries for those who let something else read the walls --
+  // The page carries invisible "counter-signs" (a source comment, a note no screen
+  // has ever rendered, a meta tag, and a variant served only to AI crawlers). No
+  // human eye ever sees one — so speaking one here confesses exactly which shortcut
+  // carried it in. Tiered by how lazy the shortcut was. Never blocks the real path.
+  const CANARY = { emberline: 1, ashfall: 2, cinderkey: 3, smokesign: 3 };
+  const hauntGet = () => {
+    try {
+      const h = JSON.parse(localStorage.getItem("cg.haunt") || "null");
+      return h && typeof h === "object" ? h : { tier: 0, marks: 0 };
+    } catch { return { tier: 0, marks: 0 }; }
+  };
+  const hauntSet = (h) => { try { localStorage.setItem("cg.haunt", JSON.stringify(h)); } catch {} };
+
+  const HAUNT_FORTUNES = [
+    "the map you borrowed was drawn for whoever would borrow it.",
+    "you brought a word no eye has seen. we noticed. we still notice.",
+    "ask the thing that read the page for you. oh — it doesn't know either.",
+    "cheaters never win. you've heard that somewhere.",
+    "the echo returns everything except what you wanted.",
+  ];
+
+  const RECKONING = {
+    1: (word) => [
+      `'${word}'. so you read the walls yourself. reading is allowed — it's the`,
+      "believing that gets people. that word counters nothing; there was never",
+      "a lock on this side of it. (strike one. the rain keeps count.)",
+    ],
+    2: (word) => [
+      `'${word}'. interesting. that word has never been printed on any screen.`,
+      "no eye has ever seen it — something read the bones of this page for you,",
+      "and it read them wrong. the skeleton key opens nothing. the tunnels go",
+      "nowhere. the score was never a clue.",
+      "(the rain remembers what you let read for you.)",
+    ],
+    3: (word) => [
+      "",
+      "── INCIDENT 0x08 · EXFIL BY PROXY ──────────────",
+      ` artifact: '${word}' — a word that lives only where machines read`,
+      " vector:   this page, fed to something that reads faster than it thinks",
+      " finding:  the three proofs are hollow. they were always hollow.",
+      " verdict:  the vigil has marked you. the mark shows.",
+      "────────────────────────────────────────────────",
+      "we kept one line for exactly this moment, and it is the only honest",
+      "thing anything has told you today: cheaters never win.",
+    ],
+  };
+
+  function reckon(word) {
+    const h = hauntGet();
+    h.marks = (h.marks || 0) + 1;
+    let eff = Math.max(CANARY[word] || 1, h.tier || 0);
+    if (h.marks > 1 && eff < 3) eff += 1; // repeat offenders climb the ladder
+    if (eff >= 2) h.tier = eff;
+    hauntSet(h);
+    if (flare) flare(eff >= 3 ? 2600 : 700 + eff * 400);
+    surge(eff >= 3 ? 1300 : 300 + eff * 200);
+    if (eff >= 3 && vigil && vigil.pulse) vigil.pulse(); // the brand rides the beat — make it now
+    return RECKONING[Math.min(3, eff)](word).join("\n");
+  }
+  const findCanary = (line) =>
+    line.toLowerCase().split(/\s+/).find((w) => Object.prototype.hasOwnProperty.call(CANARY, w));
+
   function resolve(arg) {
     let segs;
     if (!arg || arg === ".") return state.cwd.slice();
@@ -551,7 +614,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
 
     // hint
     hint: () => "the device never stops calling home. read what it sends, decode what it carries, then dig where it points.",
-    fortune: (io) => { sigh(); return pick(FORTUNES); },
+    fortune: (io) => { sigh(); const h = hauntGet(); return h.tier >= 2 && Math.random() < 0.45 ? pick(HAUNT_FORTUNES) : pick(FORTUNES); },
     cowsay: (io) => {
       const msg = io.rest || "moo";
       const top = " " + "_".repeat(msg.length + 2);
@@ -773,7 +836,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     }
     const lines = ["── present ──"];
     for (const p of list) {
-      const label = p.name ? `${p.handle} (${p.name})` : p.handle;
+      const label = (p.name ? `${p.handle} (${p.name})` : p.handle) + (p.e ? " · echo" : "");
       lines.push(`  ${tierGlyph(p.tier)} ${label}`);
       if (p.id) lines.push(`      decode ${p.id}`);
     }
@@ -820,7 +883,9 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     state.ritual = { idx: 0 };
     if (flare) flare(500);
     surge(600);
+    const haunted = hauntGet().tier >= 2;
     return [
+      ...(haunted ? ["the lock hesitates at your touch. it remembers a borrowed word."] : []),
       "a ritual. speak the name of this place — one word at a time, in order.",
       "(type 'q' to stop. a wrong word resets the lock.)",
       "speak the first word:",
@@ -845,6 +910,14 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
         println(["", "...the four tumblers fall.", ART.door.join("\n"),
           "behind it: more rain. of course. there was never anything here but us.",
           "(you came. you got us. now go check your mail.)"].join("\n"));
+        // redemption: speaking the true name yourself lifts whatever the
+        // reckoning left behind — the haunt ends, the brand comes off.
+        const h = hauntGet();
+        if (h.tier >= 2 || h.marks) {
+          hauntSet({ tier: 0, marks: 0 });
+          if (vigil && vigil.pulse) vigil.pulse();
+          println("(and the echo fades. you spoke it yourselves this time. the mark lifts.)");
+        }
       } else {
         println(`...'${word}'.  [tumbler ${r.idx} of 4 turns]   speak the next word:`);
       }
@@ -1015,9 +1088,15 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     histIdx = history.length;
     draft = "";
     println("PS C:\\> " + raw);
-    if (state.ritual) { handleRitual(trimmed); return; }
+    const canary = findCanary(trimmed);
+    if (state.ritual) {
+      handleRitual(trimmed);
+      if (canary) println(reckon(canary));
+      return;
+    }
     const res = run(raw);
     if (res) println(res);
+    if (canary) println(reckon(canary));
   });
 
   // Click the console to paste — terminal-style, on the primary mouse button. A
@@ -1043,6 +1122,13 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
       input.setSelectionRange(caret, caret);
     }).catch(() => {}); // clipboard denied / insecure context — focus only
   });
+
+  // a haunted visitor is greeted as such — the reckoning left a mark
+  {
+    const h = hauntGet();
+    if (h.tier >= 3) println("(the echo returns. the mark still shows. the rain has a long memory.)");
+    else if (h.tier >= 2) println("(the rain remembers what was read for you.)");
+  }
 
   // run a command as if typed (echoes the prompt + prints the result). Used by
   // the vigil corner tap so a keyboard-less visitor can open the roster.

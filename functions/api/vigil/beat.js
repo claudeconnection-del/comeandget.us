@@ -53,6 +53,11 @@ export async function onRequestPost({ request, env }) {
   if (body.token) tier = await verifyTier(env && env.SIGN_KEY, body.token);
   const name = tier > 0 ? await sanitizeName(body.name) : null;
 
+  // the echo brand (self-applied by the reckoning, client-side). Strictly a
+  // boolean shape — any other value is dropped. It can only mark THIS id's own
+  // record, same trust model as the tier/name squash on re-beat.
+  const echo = body.e === 1 || body.e === true;
+
   const KV = env && env.PRESENCE;
 
   if (KV) {
@@ -65,12 +70,13 @@ export async function onRequestPost({ request, env }) {
     }
     const prev = existing && existing.value;
     const writtenAt = existing && existing.metadata && existing.metadata.w;
-    const record = { b: payload.b, t: tier, name: name || undefined, last: nowSec };
+    const record = { b: payload.b, t: tier, name: name || undefined, e: echo ? 1 : undefined, last: nowSec };
 
     const changed =
       !prev ||
       prev.t !== record.t ||
-      (prev.name || "") !== (record.name || "");
+      (prev.name || "") !== (record.name || "") ||
+      (prev.e || 0) !== (record.e || 0);
     const nearExpiry =
       !writtenAt || nowSec - writtenAt >= TTL_SECONDS - REPUT_WINDOW;
 
@@ -80,7 +86,7 @@ export async function onRequestPost({ request, env }) {
       try {
         await KV.put(key, JSON.stringify(record), {
           expirationTtl: TTL_SECONDS,
-          metadata: { w: nowSec, t: tier, name: name || "", b: payload.b },
+          metadata: { w: nowSec, t: tier, name: name || "", b: payload.b, e: echo ? 1 : 0 },
         });
       } catch {
         // a transient KV error (quota, oversized key) must not 500 the beat —
@@ -97,6 +103,7 @@ export async function onRequestPost({ request, env }) {
     handle: handleFor(payload.n != null ? payload.n : id, tier),
     tier,
     name: name || undefined,
+    e: echo ? 1 : undefined,
     ageSec: Math.max(0, nowSec - payload.b),
   };
 

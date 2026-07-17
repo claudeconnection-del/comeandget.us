@@ -234,6 +234,7 @@ export function computeGhosts(now = Date.now()) {
 export function publicPresence(p) {
   const out = { id: p.id, handle: p.handle, tier: p.tier, ageSec: p.ageSec };
   if (p.name) out.name = p.name;
+  if (p.e) out.e = 1; // the reckoning's echo brand (ghosts never carry one)
   return out;
 }
 

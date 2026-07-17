@@ -69,6 +69,18 @@ function sanitizeNameLocal(raw) {
 
 const tierGlyph = (t) => (t === 1 ? "✦" : t === 2 ? "✧" : "·");
 
+// The reckoning's brand (see shell.js): tier-3 marks ride every beat so the
+// roster shows the mark to everyone. Self-applied only — it lives in this
+// browser's own haunt record and can only ever mark this browser's presence.
+function hauntEcho() {
+  try {
+    const h = JSON.parse(localStorage.getItem("cg.haunt") || "null");
+    return !!(h && h.tier >= 3);
+  } catch {
+    return false;
+  }
+}
+
 export function createVigil({ flare, audio, mount, decodeId } = {}) {
   const HEARTBEAT_MS = 45000;
   const MAX_CHIPS = 8; // cap the stack so it never buries the screen / input
@@ -127,7 +139,7 @@ export function createVigil({ flare, audio, mount, decodeId } = {}) {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "vigil-chip";
-      const label = p.name ? `${p.handle} · ${p.name}` : p.handle;
+      const label = (p.name ? `${p.handle} · ${p.name}` : p.handle) + (p.e ? " · echo" : "");
       chip.textContent = `${tierGlyph(p.tier)} ${label}`; // textContent only — never innerHTML
       chip.title = "decode — living or dead?";
       if (p.id) {
@@ -199,7 +211,7 @@ export function createVigil({ flare, audio, mount, decodeId } = {}) {
       const res = await fetch("/api/vigil/beat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id, name: name || undefined, token: token || undefined }),
+        body: JSON.stringify({ id, name: name || undefined, token: token || undefined, e: hauntEcho() ? 1 : undefined }),
       });
       if (!res.ok) return null;
       const data = await res.json();
@@ -282,5 +294,5 @@ export function createVigil({ flare, audio, mount, decodeId } = {}) {
 
   start();
 
-  return { roster, claim, setName, me, present: roster };
+  return { roster, claim, setName, me, present: roster, pulse: beat };
 }

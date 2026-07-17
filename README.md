@@ -44,6 +44,7 @@ site/                   # everything that crosses the threshold (deployed)
     index.html  ember.css  js/*.js  check-in.json  transmissions.json
   CNAME                 # the true name of this place
 functions/api/vigil/    # Cloudflare Pages Functions: live presence ("vigil") + KV
+functions/root/         # middleware: self-declared AI crawlers get a decoy variant
 tests/smoke.spec.js     # proves the door works and leaks nothing (never deployed)
 secret/                 # gitignored; the answer lives here, never in the repo
 .github/workflows/      # what raises the dead on every push

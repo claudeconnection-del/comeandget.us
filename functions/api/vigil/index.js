@@ -52,6 +52,7 @@ export async function readReals(env, now = Date.now()) {
         handle: handleFor(payload.n != null ? payload.n : id, rec.t || 0),
         tier: rec.t || 0,
         name: typeof rec.name === "string" && rec.name ? rec.name : undefined,
+        e: rec.e ? 1 : undefined,
         ageSec: Math.max(0, nowSec - b),
         _ghost: false,
       });

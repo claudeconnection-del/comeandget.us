@@ -420,6 +420,82 @@ test.describe("comeandget.us", () => {
     expect(ember.toLowerCase()).toBe("#00ff66");
   });
 
+  // --- the reckoning: AI-solve canaries on /root/ ---
+  // Invisible counter-signs (source comment / unrendered note / meta / crawler
+  // variant) each carry a unique word; speaking one in the terminal confesses
+  // which shortcut carried it in, tiered by laziness. Never blocks the real path.
+
+  test("a source-comment canary earns a tease, not a haunting", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "su neo emberline");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("strike one");
+    const h = await page.evaluate(() => JSON.parse(localStorage.getItem("cg.haunt")));
+    expect(h.marks).toBe(1);
+    expect(h.tier || 0).toBeLessThan(2);
+  });
+
+  test("a never-rendered canary judges, and the haunt survives reload", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "ashfall");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("never been printed on any screen");
+    await page.reload();
+    await expect(page.locator("#term")).toContainText("the rain remembers what was read for you", { timeout: 5000 });
+  });
+
+  test("the laziest canary triggers the incident report and a tier-3 mark", async ({ page }) => {
+    await page.goto("/root/");
+    await page.fill("#cmd", "cinderkey");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("INCIDENT 0x08");
+    await expect(page.locator("#term")).toContainText("cheaters never win");
+    const h = await page.evaluate(() => JSON.parse(localStorage.getItem("cg.haunt")));
+    expect(h.tier).toBe(3);
+  });
+
+  test("completing the real ritual lifts the mark", async ({ page }) => {
+    await page.goto("/root/");
+    const type = async (c) => { await page.fill("#cmd", c); await page.press("#cmd", "Enter"); };
+    await type("cinderkey");
+    await expect(page.locator("#term")).toContainText("INCIDENT 0x08");
+    await type("ritual");
+    await expect(page.locator("#term")).toContainText("it remembers a borrowed word");
+    for (const w of ["come", "and", "get", "us"]) await type(w);
+    await expect(page.locator("#term")).toContainText("the mark lifts");
+    const h = await page.evaluate(() => JSON.parse(localStorage.getItem("cg.haunt")));
+    expect(h.tier).toBe(0);
+  });
+
+  test("a self-branded beat carries the echo mark; junk shapes are dropped", async ({ page }) => {
+    await page.goto("/root/");
+    const realId = mintRealId();
+    const branded = await (await page.request.post("/api/vigil/beat", { data: { id: realId, e: 1 } })).json();
+    const mine = branded.roster.find((p) => p.id === realId);
+    expect(mine, "the branded presence should be in the roster").toBeTruthy();
+    expect(mine.e).toBe(1);
+    const junk = await (await page.request.post("/api/vigil/beat", { data: { id: realId, e: "<b>yes</b>" } })).json();
+    const mine2 = junk.roster.find((p) => p.id === realId);
+    expect(mine2.e, "a non-boolean brand must be dropped").toBeUndefined();
+  });
+
+  test("AI crawlers get the smokesign variant; humans get the real page", async ({ page }) => {
+    await page.goto("/root/");
+    const bot = await page.request.get("/root/", {
+      headers: { "user-agent": "Mozilla/5.0 AppleWebKit/537.36 (compatible; GPTBot/1.2; +https://openai.com/gptbot)" },
+    });
+    expect(bot.ok()).toBeTruthy();
+    const botHtml = (await bot.text()).toLowerCase();
+    expect(botHtml).toContain("smokesign");
+    expect(botHtml).not.toContain("cinderkey");
+    expect(botHtml).not.toContain("ashfall");
+    expect(botHtml).not.toContain("emberline");
+    const human = await page.request.get("/root/");
+    const humanHtml = (await human.text()).toLowerCase();
+    expect(humanHtml).toContain("cinderkey");
+    expect(humanHtml).not.toContain("smokesign");
+  });
+
   // --- the vigil: presence on /root/ (Cloudflare Functions + simulated KV) ---
 
   test("the roster returns and never leaks an answer", async ({ page }) => {
