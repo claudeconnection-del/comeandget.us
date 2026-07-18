@@ -56,7 +56,11 @@ export function createMirror({ println, run, vigil, flare } = {}) {
     try {
       let echoSeen = false;
       try {
-        const echo = await fetch("/api/mirror/echo", { cache: "no-store" });
+        // "no-cache" (NOT "no-store"): store the ETag but always revalidate, so the
+        // browser replays If-None-Match on a later visit — that revalidation IS the
+        // cookieless recognition. "no-store" would bypass the cache both ways and
+        // defeat the whole echo channel.
+        const echo = await fetch("/api/mirror/echo", { cache: "no-cache" });
         echoSeen = echo.headers.get("X-Vigil-Seen") === "1";
       } catch {}
       if (sigil) {

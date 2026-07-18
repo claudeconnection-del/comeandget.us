@@ -191,6 +191,23 @@ test.describe("the reflection — client probes", () => {
     expect(res.status()).toBe(400);
   });
 
+  test("the fpc cookie round-trips to /api/mirror and corroborates a return", async ({ page }) => {
+    await page.goto("/root/");
+    // first POST sets the fpc cookie (a signed firstSeen); use a random sigil so KV
+    // recognition can't be what carries the return on the second call
+    const sigilA = "abc123".padEnd(64, "0");
+    const r1 = await page.request.post("/api/mirror", { data: { sigil: sigilA } });
+    expect(r1.ok()).toBeTruthy();
+    expect((r1.headers()["set-cookie"] || "").toLowerCase()).toContain("path=/api/mirror");
+    // a SECOND POST with a DIFFERENT sigil: KV keys off the sigil so it would read as
+    // new — the only thing that can mark this "returning" is the fpc cookie actually
+    // being sent back to /api/mirror (the bug we fixed: Path=/root never would).
+    const sigilB = "def456".padEnd(64, "0");
+    const r2 = await page.request.post("/api/mirror", { data: { sigil: sigilB } });
+    const d2 = await r2.json();
+    expect(d2.seen.returning, "fpc must reach /api/mirror and corroborate the return").toBeTruthy();
+  });
+
   test("the dossier fuses edge truth and recognizes a return end-to-end", async ({ page }) => {
     // first visit primes server memory for this browser's sigil
     await page.goto("/root/?mirror=now");

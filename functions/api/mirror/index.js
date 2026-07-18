@@ -126,7 +126,10 @@ export async function onRequestPost({ request, env }) {
   const headers = {};
   if (signKey) {
     const val = await fpcValue(signKey, firstSeen);
-    headers["Set-Cookie"] = `${COOKIE}=${val}; Secure; HttpOnly; SameSite=Lax; Path=/root; Max-Age=${TTL}`;
+    // Path must cover the endpoint that READS the cookie (POST /api/mirror) — a
+    // Path=/root cookie is a sibling to /api/mirror and would never be sent back,
+    // leaving the corroboration channel write-only. Scope it to the mirror API.
+    headers["Set-Cookie"] = `${COOKIE}=${val}; Secure; HttpOnly; SameSite=Lax; Path=/api/mirror; Max-Age=${TTL}`;
   }
   return json({ edge, deltas, seen: { count: Math.max(count, 1), firstSeen, returning } }, 200, headers);
 }
