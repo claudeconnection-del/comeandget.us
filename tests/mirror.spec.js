@@ -105,4 +105,18 @@ test.describe("the reflection — client probes", () => {
     });
     expect(ok, "dossierLines must degrade to a clean block on any input").toBeTruthy();
   });
+
+  test("printDossier emits each posture line through println (text only)", async ({ page }) => {
+    await page.goto("/root/");
+    const emitted = await page.evaluate(async () => {
+      const { inferOS } = await import("/root/js/mirror/lines.js");
+      const { printDossier } = await import("/root/js/mirror/dossier.js");
+      const captured = [];
+      const probes = { webgl: { value: { renderer: "ANGLE (Direct3D11)" }, osHint: "windows" }, hardware: { value: { cores: 8 } } };
+      printDossier((s) => captured.push(String(s)), { probes, os: inferOS(probes) });
+      return captured;
+    });
+    expect(emitted.length).toBeGreaterThan(3);
+    expect(emitted.join("\n")).toContain("DEVICE POSTURE");
+  });
 });
