@@ -190,4 +190,20 @@ test.describe("the reflection — client probes", () => {
     const res = await page.request.post("/api/mirror", { headers: { "content-type": "application/json" }, data: "not json at all" });
     expect(res.status()).toBe(400);
   });
+
+  test("the dossier fuses edge truth and recognizes a return end-to-end", async ({ page }) => {
+    // first visit primes server memory for this browser's sigil
+    await page.goto("/root/?mirror=now");
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+    // a real edge line only appears when cf/KV are live; locally we at least assert
+    // the report renders and the return path is exercised without errors
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.reload();
+    await page.goto("/root/?mirror=now");
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+    // returning line surfaces because cg.mirror.seen.count >= 2 now
+    await expect(page.locator("#term")).toContainText("again", { timeout: 8000 });
+    expect(errors, `reveal path errored: ${errors.join(" | ")}`).toEqual([]);
+  });
 });

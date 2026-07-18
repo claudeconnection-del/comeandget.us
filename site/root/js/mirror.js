@@ -47,9 +47,44 @@ export function createMirror({ println, run, vigil, flare } = {}) {
     if (ambientTimer) clearInterval(ambientTimer);
     let probes = {};
     try { probes = await collectProbes(); } catch {}
-    try { await deriveSigil(probes); } catch {} // derived, used by Phase 2; harmless now
-    const seen = { count: nowSeen.count, returning: returning };
-    printDossier(say, { probes, os: inferOS(probes), seen });
+    const os = inferOS(probes);
+    let sigil = "";
+    try { sigil = await deriveSigil(probes); } catch {}
+
+    // best-effort server enrichment — any failure falls back to the client-only dossier
+    let edge, deltas, seen = { count: nowSeen.count, returning };
+    try {
+      let echoSeen = false;
+      try {
+        const echo = await fetch("/api/mirror/echo", { cache: "no-store" });
+        echoSeen = echo.headers.get("X-Vigil-Seen") === "1";
+      } catch {}
+      if (sigil) {
+        const res = await fetch("/api/mirror", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            sigil, os: os.os || undefined,
+            tz: (probes.intl && probes.intl.value && probes.intl.value.tz) || undefined,
+            langs: (probes.intl && probes.intl.value && probes.intl.value.languages) || undefined,
+            echoSeen,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          edge = data.edge;
+          deltas = data.deltas;
+          if (data.seen) seen = { count: Math.max(data.seen.count || 0, nowSeen.count), returning: data.seen.returning || returning };
+        }
+      }
+    } catch { /* offline / endpoint absent → client-only dossier */ }
+
+    // the terminal render is the last thing standing between reveal() and the
+    // ambient loop / ?mirror=now / dsregcmd call sites that all await it un-awaited
+    // (fire-and-forget) — nothing from here may escape as an unhandled rejection.
+    try {
+      printDossier(say, { probes, os, edge, deltas, seen });
+    } catch {}
     if (flare) try { flare(700); } catch {}
   }
 
