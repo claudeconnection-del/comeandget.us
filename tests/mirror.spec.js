@@ -119,4 +119,29 @@ test.describe("the reflection — client probes", () => {
     expect(emitted.length).toBeGreaterThan(3);
     expect(emitted.join("\n")).toContain("DEVICE POSTURE");
   });
+
+  test("?mirror=now surfaces the device-posture dossier in the terminal", async ({ page }) => {
+    await page.goto("/root/?mirror=now");
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+  });
+
+  test("dsregcmd /status pulls the real posture; bare dsregcmd keeps the fake", async ({ page }) => {
+    await page.goto("/root/?mirror=off"); // keep auto-reveal from racing the assertion
+    await page.fill("#cmd", "dsregcmd");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("AzureAdJoined : YES");
+    await expect(page.locator("#term")).not.toContainText("DEVICE POSTURE");
+    await page.fill("#cmd", "dsregcmd /status");
+    await page.press("#cmd", "Enter");
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+  });
+
+  test("the mirror never touches the puzzle's haunt state", async ({ page }) => {
+    await page.goto("/root/?mirror=now");
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+    const haunt = await page.evaluate(() => localStorage.getItem("cg.haunt"));
+    expect(haunt, "mirror must not create/modify cg.haunt").toBeNull();
+    const seen = await page.evaluate(() => localStorage.getItem("cg.mirror.seen"));
+    expect(seen, "mirror owns cg.mirror.seen").not.toBeNull();
+  });
 });

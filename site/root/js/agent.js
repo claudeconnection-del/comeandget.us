@@ -51,6 +51,7 @@ const vigil = createVigil({
 });
 
 // The interactive faux terminal.
+let mirror = null;
 const { println, run } = initTerminal({
   term: document.getElementById("term"),
   input: document.getElementById("cmd"),
@@ -61,8 +62,15 @@ const { println, run } = initTerminal({
   setLite: rain.setLite,
   audio,
   vigil,
+  getMirror: () => mirror,
 });
 runDecode = (id) => run("decode " + id);
+
+// The Reflection — device-posture mirror. Parallel to the puzzle; renders into
+// the terminal log. dsregcmd /status pulls it on demand (see shell.js).
+import("./mirror.js").then(({ createMirror }) => {
+  mirror = createMirror({ println, run, vigil, flare: rain.flare });
+}).catch((e) => console.error("[mirror] failed to wake", e));
 
 // A breadcrumb for the Application tab (a Graph scope, base64).
 try {
