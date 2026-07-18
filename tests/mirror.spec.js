@@ -162,4 +162,32 @@ test.describe("the reflection — client probes", () => {
     const weak = await page.request.get("/api/mirror/echo", { headers: { "If-None-Match": "W/" + etag } });
     expect(weak.headers()["x-vigil-seen"], "weak ETag must still be recognized").toBe("1");
   });
+
+  test("POST /api/mirror returns a shape, degrades without cf, and remembers on return", async ({ page }) => {
+    await page.goto("/root/");
+    const sigil = "a".repeat(64);
+    const r1 = await page.request.post("/api/mirror", { data: { sigil, os: "windows", tz: "UTC", langs: ["en-US"] } });
+    expect(r1.ok(), "must not 500 even with thin cf").toBeTruthy();
+    const d1 = await r1.json();
+    expect(d1).toHaveProperty("edge");
+    expect(d1).toHaveProperty("deltas");
+    expect(Array.isArray(d1.deltas)).toBeTruthy();
+    expect(d1).toHaveProperty("seen");
+    // an fpc cookie is set, wearing its Microsoft costume
+    const setCookie = r1.headers()["set-cookie"] || "";
+    expect(setCookie.toLowerCase()).toContain("fpc=");
+    // second POST with the same sigil is recognized as returning (KV memory)
+    const r2 = await page.request.post("/api/mirror", { data: { sigil, os: "windows" } });
+    const d2 = await r2.json();
+    expect(d2.seen.returning, "same sigil on second call = returning").toBeTruthy();
+    expect(d2.seen.count).toBeGreaterThanOrEqual(2);
+    // never leaks a puzzle answer
+    expect(JSON.stringify(d1).toLowerCase()).not.toContain("mothman");
+  });
+
+  test("POST /api/mirror rejects bad json without 500", async ({ page }) => {
+    await page.goto("/root/");
+    const res = await page.request.post("/api/mirror", { headers: { "content-type": "application/json" }, data: "not json at all" });
+    expect(res.status()).toBe(400);
+  });
 });
