@@ -65,4 +65,30 @@ test.describe("the reflection — client probes", () => {
     });
     expect(moved, "a change to any stable field must change the sigil").toBeTruthy();
   });
+
+  test("inferOS reads Windows from a Direct3D WebGL backend", async ({ page }) => {
+    await page.goto("/root/");
+    const os = await page.evaluate(async () => {
+      const { inferOS } = await import("/root/js/mirror/lines.js");
+      return inferOS({ webgl: { value: { renderer: "ANGLE (NVIDIA, Direct3D11)" }, osHint: "windows" } });
+    });
+    expect(os.os).toBe("windows");
+    expect(["high", "medium", "low"]).toContain(os.confidence);
+  });
+
+  test("dossierLines assembles a non-empty posture block and stays answer-clean", async ({ page }) => {
+    await page.goto("/root/");
+    const lines = await page.evaluate(async () => {
+      const { inferOS, dossierLines } = await import("/root/js/mirror/lines.js");
+      const probes = { webgl: { value: { renderer: "ANGLE (Apple M2, Metal)" }, osHint: "macos" },
+        intl: { value: { tz: "America/New_York", languages: ["en-US"] } },
+        hardware: { value: { cores: 10 } }, screen: { value: { w: 1512, h: 982, dpr: 2 } } };
+      return dossierLines({ probes, os: inferOS(probes) });
+    });
+    expect(Array.isArray(lines)).toBeTruthy();
+    expect(lines.length).toBeGreaterThan(3);
+    const blob = lines.join("\n").toLowerCase();
+    expect(blob).toContain("posture");
+    expect(blob).not.toContain("mothman"); // never carries puzzle content
+  });
 });
