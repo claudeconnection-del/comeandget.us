@@ -67,6 +67,11 @@ const SHIPPED = [
   "/root/js/ink.js",
   "/root/js/audio.js",
   "/root/js/vigil.js",
+  "/root/js/mirror.js",
+  "/root/js/mirror/probes.js",
+  "/root/js/mirror/sigil.js",
+  "/root/js/mirror/lines.js",
+  "/root/js/mirror/dossier.js",
   "/root/check-in.json",
   "/root/transmissions.json",
 ];

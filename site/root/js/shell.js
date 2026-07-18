@@ -12,7 +12,7 @@ import { startBreakout } from "./breakout.js";
 import { startTetris } from "./tetris.js";
 import { shade, lighten } from "./ink.js";
 
-export function initTerminal({ term, input, form, decode, flare, setPalette, setLite, audio, vigil }) {
+export function initTerminal({ term, input, form, decode, flare, setPalette, setLite, audio, vigil, getMirror }) {
   function println(text = "") {
     term.appendChild(document.createTextNode((Array.isArray(text) ? text.join("\n") : text) + "\n"));
     // bound scrollback so a very long session can't grow the DOM forever
@@ -432,7 +432,22 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     w: () => ["USER      TTY    FROM           WHAT", "neo       pts/0  10.13.37.66    reading this", "us        pts/?  everywhere     watching", "you       pts/1  somewhere      (we see you)"].join("\n"),
     last: () => ["neo       pts/0   still logged in", "morpheus  pts/1   gone. unplugged.", "us        pts/?   never logged out", "you       pts/1   just now — still here"].join("\n"),
     finger: (io) => { const u = (io.rest || "").toLowerCase(); return (u && u in USERS) ? `Login: ${u}\nName: ${u}\nStatus: present, somehow.\nPlan:\n  watch. wait. answer the mail.` : "finger: no such user. point it elsewhere."; },
-    dsregcmd: () => "AzureAdJoined : YES\nTenantName : comeandget\nMDMUrl : Intune\nDeviceAuthStatus : SUCCESS (token replayed, nobody checked)",
+    dsregcmd: (io) => {
+      if (/\/status\b/i.test(io.rest || "")) {
+        // mirror.js loads via a dynamic import kicked off at page boot; if this
+        // command lands before that import settles, poll briefly instead of
+        // silently dropping the pull (getMirror() is a live closure — it'll
+        // start returning the real mirror the moment agent.js's .then() runs).
+        const tryReveal = (triesLeft) => {
+          const m = getMirror && getMirror();
+          if (m && m.reveal) { m.reveal("dsregcmd"); return; }
+          if (triesLeft > 0) setTimeout(() => tryReveal(triesLeft - 1), 150);
+        };
+        tryReveal(20); // ~3s window
+        return "AzureAdJoined : YES\n+ fetching live device posture from the tenant...";
+      }
+      return "AzureAdJoined : YES\nTenantName : comeandget\nMDMUrl : Intune\nDeviceAuthStatus : SUCCESS (token replayed, nobody checked)";
+    },
 
     // filesystem
     pwd: () => (state.maze ? mazePwd() : fmtPath(state.cwd)),
