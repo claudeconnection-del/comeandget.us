@@ -49,4 +49,20 @@ test.describe("the reflection — client probes", () => {
     });
     expect(changed, "volatile probes must not move the sigil").toBeTruthy();
   });
+
+  test("changing a stable field moves the sigil (positive control)", async ({ page }) => {
+    await page.goto("/root/");
+    const moved = await page.evaluate(async () => {
+      const { deriveSigil } = await import("/root/js/mirror/sigil.js");
+      const base = { webgl: { value: { renderer: "ANGLE (Direct3D11)" } }, intl: { value: { tz: "UTC" } },
+        hardware: { value: { cores: 8 } }, screen: { value: { gamut: "srgb" } },
+        emoji: { value: { w: 120 } }, canvas: { value: "abc" }, libm: { value: "def" } };
+      const s1 = await deriveSigil(base);
+      const s2 = await deriveSigil({ ...base, webgl: { value: { renderer: "ANGLE (Apple M2, Metal)" } } });
+      const s3 = await deriveSigil({ ...base, libm: { value: "XYZ" } });
+      const s4 = await deriveSigil({ ...base, intl: { value: { tz: "America/New_York" } } });
+      return s1 !== s2 && s1 !== s3 && s1 !== s4;
+    });
+    expect(moved, "a change to any stable field must change the sigil").toBeTruthy();
+  });
 });
