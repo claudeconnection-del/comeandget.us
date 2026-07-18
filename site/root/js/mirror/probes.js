@@ -192,10 +192,12 @@ async function probeAudio() {
       osc.connect(comp); comp.connect(ctx.destination);
       osc.start(0);
       ctx.oncomplete = (e) => {
-        const data = e.renderedBuffer.getChannelData(0);
-        let acc = 0;
-        for (let i = 4000; i < 5000; i++) acc += Math.abs(data[i]);
-        finish({ value: acc.toString().slice(0, 16) });
+        try {
+          const data = e.renderedBuffer.getChannelData(0);
+          let acc = 0;
+          for (let i = 4000; i < 5000; i++) acc += Math.abs(data[i]);
+          finish({ value: acc.toString().slice(0, 16) });
+        } catch { finish(null); }
       };
       ctx.startRendering();
       setTimeout(() => finish(null), 1000); // never hang the collection
