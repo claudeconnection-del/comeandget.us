@@ -42,7 +42,8 @@ export function ambientLines(probes) {
   return out;
 }
 
-export function dossierLines({ probes, os, edge, deltas, seen } = {}) {
+export function dossierLines(opts) {
+  const { probes, os, edge, deltas, seen } = opts || {};
   const p = probes || {};
   const L = [];
   L.push("── INTUNE · DEVICE POSTURE (the one we didn't have to fake) ──");
@@ -55,7 +56,7 @@ export function dossierLines({ probes, os, edge, deltas, seen } = {}) {
   const gpu = val(p, ["webgl", "value", "renderer"], null);
   if (gpu) L.push(" display GPU   : " + gpu);
   const scr = val(p, ["screen", "value"], null);
-  if (scr) L.push(" panel         : " + scr.w + "×" + scr.h + " @" + (scr.dpr || 1) + "x, " + (scr.gamut || "?") + "/" + (scr.hdr || "?"));
+  if (scr) L.push(" panel         : " + (scr.w ?? "?") + "×" + (scr.h ?? "?") + " @" + (scr.dpr || 1) + "x, " + (scr.gamut || "?") + "/" + (scr.hdr || "?"));
   const cores = val(p, ["hardware", "value", "cores"], null);
   const mem = val(p, ["hardware", "value", "memory"], null);
   if (cores || mem) L.push(" compute       : " + (cores || "?") + " cores" + (mem ? " · ~" + mem + " GiB class" : ""));

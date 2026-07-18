@@ -91,4 +91,18 @@ test.describe("the reflection — client probes", () => {
     expect(blob).toContain("posture");
     expect(blob).not.toContain("mothman"); // never carries puzzle content
   });
+
+  test("dossierLines never throws on null / empty / partial input", async ({ page }) => {
+    await page.goto("/root/");
+    const ok = await page.evaluate(async () => {
+      const { dossierLines } = await import("/root/js/mirror/lines.js");
+      for (const arg of [null, undefined, {}, { probes: null }, { probes: { screen: { value: {} } } }]) {
+        const out = dossierLines(arg);
+        if (!Array.isArray(out) || out.length < 1) return false;
+        if (out.join("\n").includes("undefined")) return false; // no undefined leaking into copy
+      }
+      return true;
+    });
+    expect(ok, "dossierLines must degrade to a clean block on any input").toBeTruthy();
+  });
 });
