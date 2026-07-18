@@ -43,7 +43,7 @@ export async function echoToken(signKey, firstSeenSec) {
 
 export async function verifyEchoToken(signKey, token) {
   if (!signKey || typeof token !== "string") return null;
-  const raw = token.replace(/^"|"$/g, "").replace(/^W\//, ""); // tolerate quoted/weak ETag
+  const raw = token.replace(/^W\//, "").replace(/^"|"$/g, ""); // tolerate weak (W/) then quoted ETag
   const parts = raw.split(".");
   if (parts.length !== 2) return null;
   const [body, sig] = parts;

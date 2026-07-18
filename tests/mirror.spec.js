@@ -158,5 +158,8 @@ test.describe("the reflection — client probes", () => {
     // a forged token is not recognized
     const forged = await page.request.get("/api/mirror/echo", { headers: { "If-None-Match": '"deadbeef.deadbeef"' } });
     expect(forged.headers()["x-vigil-seen"]).toBe("0");
+    // a weak ETag (W/"...") — as CDNs emit for compressed responses — is still recognized
+    const weak = await page.request.get("/api/mirror/echo", { headers: { "If-None-Match": "W/" + etag } });
+    expect(weak.headers()["x-vigil-seen"], "weak ETag must still be recognized").toBe("1");
   });
 });
