@@ -22,4 +22,31 @@ test.describe("the reflection — client probes", () => {
     }
     expect(errors, `probe collection threw: ${errors.join(" | ")}`).toEqual([]);
   });
+
+  test("deriveSigil is stable across repeated collection on the same machine", async ({ page }) => {
+    await page.goto("/root/");
+    const [a, b] = await page.evaluate(async () => {
+      const { collectProbes } = await import("/root/js/mirror/probes.js");
+      const { deriveSigil } = await import("/root/js/mirror/sigil.js");
+      const s1 = await deriveSigil(await collectProbes());
+      const s2 = await deriveSigil(await collectProbes());
+      return [s1, s2];
+    });
+    expect(a).toMatch(/^[0-9a-f]{64}$/);
+    expect(a).toBe(b); // recomputes to the same value — the resilience property
+  });
+
+  test("stableMaterial ignores volatile probes (theme/net/clock)", async ({ page }) => {
+    await page.goto("/root/");
+    const changed = await page.evaluate(async () => {
+      const { deriveSigil } = await import("/root/js/mirror/sigil.js");
+      const base = { webgl: { value: { renderer: "ANGLE (Direct3D11)" } }, intl: { value: { tz: "UTC" } },
+        hardware: { value: { cores: 8 } }, screen: { value: { gamut: "srgb" } },
+        emoji: { value: { w: 120 } }, canvas: { value: "abc" }, libm: { value: "def" } };
+      const s1 = await deriveSigil(base);
+      const s2 = await deriveSigil({ ...base, theme: { value: { scheme: "dark" } }, net: { value: { rtt: 50 } }, clock: { value: { minDeltaMs: 0.1 } } });
+      return s1 === s2;
+    });
+    expect(changed, "volatile probes must not move the sigil").toBeTruthy();
+  });
 });
