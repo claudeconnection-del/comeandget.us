@@ -144,4 +144,19 @@ test.describe("the reflection — client probes", () => {
     const seen = await page.evaluate(() => localStorage.getItem("cg.mirror.seen"));
     expect(seen, "mirror owns cg.mirror.seen").not.toBeNull();
   });
+
+  test("the echo channel recognizes a returning browser cookielessly", async ({ page }) => {
+    await page.goto("/root/");
+    const first = await page.request.get("/api/mirror/echo");
+    expect(first.ok()).toBeTruthy();
+    expect(first.headers()["x-vigil-seen"]).toBe("0");
+    const etag = first.headers()["etag"];
+    expect(etag, "echo must issue an ETag").toBeTruthy();
+    // hand the token back the way a browser cache would
+    const second = await page.request.get("/api/mirror/echo", { headers: { "If-None-Match": etag } });
+    expect(second.headers()["x-vigil-seen"]).toBe("1");
+    // a forged token is not recognized
+    const forged = await page.request.get("/api/mirror/echo", { headers: { "If-None-Match": '"deadbeef.deadbeef"' } });
+    expect(forged.headers()["x-vigil-seen"]).toBe("0");
+  });
 });
