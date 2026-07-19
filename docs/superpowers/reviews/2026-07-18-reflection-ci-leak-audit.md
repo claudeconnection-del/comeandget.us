@@ -69,12 +69,24 @@ the cookie (not KV) carries the return. Secrecy note: the path attr reveals no m
   riddle base64 / decoded riddle). Currently clean, but a future dev could ship the riddle without tripping
   the guard, short-circuiting the "dig DNS" step. Consider adding riddle needles (from a secret source) for
   defense-in-depth on `/root`.
-- **R2 (coverage):** vigil `claim`/`name` still skip in CI (no `CODE_ARG1`). Left as-is to avoid asserting a
-  throwaway code against `claim.js` validation this round; could be armed like `SIGN_KEY` later.
+- **R2 (coverage) — CLOSED:** vigil `claim` + server-side name/needle-rejection tests now run in CI. A
+  throwaway `CODE_ARG1` is armed alongside `SIGN_KEY` in the `.dev.vars` CI step; `claim.js` compares the
+  submitted code to `env.CODE_ARG1` via `timingSafeEqual`, so a self-matching throwaway is accepted, letting
+  the test earn a token and then assert the server drops answer-needle and markup names before they hit the
+  public roster. Verified green locally.
 - **R3 (drift):** `SHIPPED` array is hand-maintained; content-leak coverage is still guaranteed by the
   all-tracked-files scan, but consider deriving `SHIPPED` from the filesystem so it can't silently drift.
 - **R4 (residual 4xx):** the zone-level 403 for AI crawlers and bot 404s on random paths are BY DESIGN
   (honeypot) — reduce via the new robots.txt `Disallow`, otherwise filter in analytics rather than eliminate.
+
+## 4b. Independent audit (separate agent) — PASS
+
+A separate auditor independently re-verified leak-clean (3 sweep methods), empirically exercised all four
+arm/environment branches of the fail-closed guard, confirmed the `PUZZLE_ANSWER` repo secret already exists
+on GitHub (so production CI genuinely runs the guard), verified `/api/mirror` fail-soft with the success path
+unchanged, confirmed the 404-killers cannot shadow `/api/*` or `/root/*`, and ran the full suite (55/55). It
+found **0 Critical** and 1 Important — the pre-existing R2, now **closed** above. Full write-up:
+`docs/superpowers/reviews/2026-07-18-independent-audit.md`.
 
 ## 5. Verdict
 

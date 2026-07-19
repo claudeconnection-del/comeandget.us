@@ -40,7 +40,12 @@ jobs:
       # Cloudflare and used only at deploy/runtime, never here. .dev.vars is
       # gitignored, so this file exists only for the length of the CI job.
       - name: Arm dev-server test secrets (throwaway)
-        run: printf 'SIGN_KEY=%s\n' "ci-smoke-not-a-real-secret-$(date +%s)" > .dev.vars
+        # SIGN_KEY arms the mirror/echo recognition tests; CODE_ARG1 arms the vigil
+        # claim + server-side name/needle-rejection tests (claim.js compares the
+        # submitted code to env.CODE_ARG1, so a throwaway that matches itself is
+        # accepted). Fixed literals so the test's readDevVar and the worker env
+        # agree. Both are test-only — the real values live in Cloudflare.
+        run: printf 'SIGN_KEY=%s\nCODE_ARG1=%s\n' "ci-smoke-signing-key-not-real" "ci-smoke-claim-code" > .dev.vars
       - name: Smoke test the puzzle
         run: npm test
         env:
