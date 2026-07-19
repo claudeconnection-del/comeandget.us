@@ -33,11 +33,21 @@ jobs:
         run: npm run validate
       - name: Install Playwright (chromium)
         run: npx playwright install --with-deps chromium
+      # Arm the local dev server (wrangler pages dev reads .dev.vars) with
+      # THROWAWAY, test-only secrets so the presence/mirror recognition tests
+      # actually run in CI instead of skipping or failing on a missing key.
+      # These are NOT production secrets — the real SIGN_KEY is configured in
+      # Cloudflare and used only at deploy/runtime, never here. .dev.vars is
+      # gitignored, so this file exists only for the length of the CI job.
+      - name: Arm dev-server test secrets (throwaway)
+        run: printf 'SIGN_KEY=%s\n' "ci-smoke-not-a-real-secret-$(date +%s)" > .dev.vars
       - name: Smoke test the puzzle
         run: npm test
         env:
-          # Optional: set a repo secret named PUZZLE_ANSWER to enforce the
-          # "answer never ships" guard in CI. If unset, that one check skips.
+          # REQUIRED: the PUZZLE_ANSWER repo secret arms the "answers never ship"
+          # leak guard. The guard is now FAIL-CLOSED in CI (tests/smoke.spec.js) —
+          # if this secret is unset, the leak-guard tests ERROR rather than skip,
+          # so no build can go green (and deploy) with the guard silently disabled.
           PUZZLE_ANSWER: ${{ secrets.PUZZLE_ANSWER }}
 
   deploy:

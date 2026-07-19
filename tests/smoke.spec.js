@@ -34,6 +34,21 @@ function loadAnswerNeedles() {
 
 const NEEDLES = loadAnswerNeedles();
 
+// Fail-CLOSED in CI. A green CI run must PROVE the "answers never ship" guard
+// actually ran — otherwise a green check is meaningless and could deploy a leak.
+// Locally an unarmed guard still skips (dev convenience); in CI an unarmed guard
+// is a hard error, so no build can go green — and deploy — with the guard silently
+// disabled. Returns true (allow skip) only when local AND unarmed.
+function leakGuardArmedOrSkip() {
+  if (NEEDLES.length) return false; // armed → run the guard, never skip
+  if (process.env.CI) {
+    throw new Error(
+      "LEAK GUARD UNARMED IN CI — set the PUZZLE_ANSWER repo secret so 'answers never ship' is enforced before any deploy."
+    );
+  }
+  return true; // local + unarmed → allow the convenience skip
+}
+
 // assert none of the forbidden needles appear in a blob of text
 function expectNoNeedles(text, where) {
   const low = (text || "").toLowerCase();
@@ -159,7 +174,7 @@ test.describe("comeandget.us", () => {
   });
 
   test("no puzzle answer appears in any shipped file or the DOM", async ({ page }) => {
-    test.skip(!NEEDLES.length, "set PUZZLE_ANSWER or secret/answer.txt to enable the leak guard");
+    test.skip(leakGuardArmedOrSkip(), "leak guard unarmed locally (set PUZZLE_ANSWER or secret/answer.txt)");
 
     await page.goto("/?wake=0");
     await page.keyboard.type("MOTHMAN"); // fully solved state — still must not contain any answer
@@ -179,7 +194,7 @@ test.describe("comeandget.us", () => {
   // file (CHECKPOINT.md, docs, configs, tests…), so a stray note can't leak the
   // secret into public git the way it once did. Scans `git ls-files`.
   test("no puzzle answer appears in any tracked repo file", () => {
-    test.skip(!NEEDLES.length, "set PUZZLE_ANSWER or secret/answer.txt to enable the guard");
+    test.skip(leakGuardArmedOrSkip(), "leak guard unarmed locally (set PUZZLE_ANSWER or secret/answer.txt)");
     const root = join(dirname(fileURLToPath(import.meta.url)), "..");
     const files = execSync("git ls-files", { cwd: root, encoding: "utf8" })
       .split("\n").map((s) => s.trim()).filter(Boolean);
@@ -569,7 +584,7 @@ test.describe("comeandget.us", () => {
   test("name sanitization rejects needles and markup (server-side)", async ({ page }) => {
     const code = process.env.CODE_ARG1 || readDevVar("CODE_ARG1");
     test.skip(!code, "set CODE_ARG1 in .dev.vars or env to exercise name");
-    test.skip(!NEEDLES.length, "set PUZZLE_ANSWER or secret/answer.txt to exercise needle rejection");
+    test.skip(leakGuardArmedOrSkip(), "leak guard unarmed locally (set PUZZLE_ANSWER or secret/answer.txt)");
 
     await page.goto("/root/");
 
