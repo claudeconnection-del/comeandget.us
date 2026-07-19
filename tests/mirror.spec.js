@@ -185,10 +185,21 @@ test.describe("the reflection — client probes", () => {
     expect(JSON.stringify(d1).toLowerCase()).not.toContain("mothman");
   });
 
-  test("POST /api/mirror rejects bad json without 500", async ({ page }) => {
+  test("POST /api/mirror answers malformed input SOFT — no 4xx, no 5xx", async ({ page }) => {
     await page.goto("/root/");
-    const res = await page.request.post("/api/mirror", { headers: { "content-type": "application/json" }, data: "not json at all" });
-    expect(res.status()).toBe(400);
+    // the honeypot invites junk POSTs; a 400 per probe would pollute analytics.
+    // Malformed input must get a benign 200, never a 4xx/5xx.
+    const badJson = await page.request.post("/api/mirror", { headers: { "content-type": "application/json" }, data: "not json at all" });
+    expect(badJson.status(), "bad json → benign 200").toBe(200);
+    const b = await badJson.json();
+    expect(b).toHaveProperty("edge");
+    expect(b).toHaveProperty("deltas");
+    expect(b.seen.returning, "junk is never 'returning'").toBe(false);
+    // junk carries no identity, so no fpc cookie is minted for it
+    expect(badJson.headers()["set-cookie"] || "", "no cookie for malformed input").toBe("");
+    // a non-hex sigil is soft-rejected the same way
+    const badSigil = await page.request.post("/api/mirror", { data: { sigil: "not-hex!!" } });
+    expect(badSigil.status(), "bad sigil → benign 200").toBe(200);
   });
 
   test("the fpc cookie round-trips to /api/mirror and corroborates a return", async ({ page }) => {

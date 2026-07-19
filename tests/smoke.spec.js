@@ -127,6 +127,14 @@ function readDevVar(key) {
 }
 
 test.describe("comeandget.us", () => {
+  // Clean analytics: the paths browsers/bots auto-request must never 4xx.
+  test("common auto-requested paths never return a client error", async ({ page }) => {
+    for (const p of ["/robots.txt", "/favicon.ico", "/apple-touch-icon.png"]) {
+      const res = await page.request.get(p); // follows the 302 to the real icon
+      expect(res.status(), `${p} must not be a 4xx/5xx (analytics noise)`).toBeLessThan(400);
+    }
+  });
+
   test("the door loads without errors", async ({ page }) => {
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));

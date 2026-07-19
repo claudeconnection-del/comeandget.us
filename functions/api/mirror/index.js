@@ -91,18 +91,23 @@ function computeDeltas({ os, tz, langs, edge, request }) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  // Fail-SOFT, never 4xx: this endpoint sits behind a honeypot that invites junk
+  // traffic, so a 400 per probe just pollutes analytics. Malformed input gets a
+  // benign, cookieless "nothing to see" 200 — the walls answer everything.
+  const benign = () => json({ edge: {}, deltas: [], seen: { count: 1, firstSeen: nowSec, returning: false } });
+
   let body;
-  try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+  try { body = await request.json(); } catch { return benign(); }
 
   const sigil = body && typeof body.sigil === "string" ? body.sigil.slice(0, 128) : "";
-  if (!/^[0-9a-f]{16,128}$/.test(sigil)) return json({ error: "bad sigil" }, 400);
+  if (!/^[0-9a-f]{16,128}$/.test(sigil)) return benign();
 
   const signKey = env && env.SIGN_KEY;
   const edge = readEdge(request.cf);
   const deltas = computeDeltas({ os: body.os, tz: body.tz, langs: body.langs, edge, request });
 
   // recognition: KV (authoritative) corroborated by the fpc cookie and echoSeen
-  const nowSec = Math.floor(Date.now() / 1000);
   let count = 0, firstSeen = nowSec;
   const KV = env && env.PRESENCE;
   if (KV && signKey) {
