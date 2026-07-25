@@ -12,6 +12,7 @@ import {
   sanitizeName,
   publicPresence,
   handleFor,
+  hauntTier,
   json,
 } from "./_lib.js";
 import { buildRoster } from "./index.js";
@@ -57,6 +58,9 @@ export async function onRequestPost({ request, env }) {
   // boolean shape — any other value is dropped. It can only mark THIS id's own
   // record, same trust model as the tier/name squash on re-beat.
   const echo = body.e === 1 || body.e === true;
+  // the granular reckoning tier (1/2/3) — NOT surfaced in the public roster, only
+  // persisted to KV so the tracker can chart the AI-shortcut distribution.
+  const ht = hauntTier(body.ht);
 
   const KV = env && env.PRESENCE;
 
@@ -70,13 +74,14 @@ export async function onRequestPost({ request, env }) {
     }
     const prev = existing && existing.value;
     const writtenAt = existing && existing.metadata && existing.metadata.w;
-    const record = { b: payload.b, t: tier, name: name || undefined, e: echo ? 1 : undefined, last: nowSec };
+    const record = { b: payload.b, t: tier, name: name || undefined, e: echo ? 1 : undefined, ht: ht || undefined, last: nowSec };
 
     const changed =
       !prev ||
       prev.t !== record.t ||
       (prev.name || "") !== (record.name || "") ||
-      (prev.e || 0) !== (record.e || 0);
+      (prev.e || 0) !== (record.e || 0) ||
+      (prev.ht || 0) !== (record.ht || 0);
     const nearExpiry =
       !writtenAt || nowSec - writtenAt >= TTL_SECONDS - REPUT_WINDOW;
 
@@ -86,7 +91,7 @@ export async function onRequestPost({ request, env }) {
       try {
         await KV.put(key, JSON.stringify(record), {
           expirationTtl: TTL_SECONDS,
-          metadata: { w: nowSec, t: tier, name: name || "", b: payload.b, e: echo ? 1 : 0 },
+          metadata: { w: nowSec, t: tier, name: name || "", b: payload.b, e: echo ? 1 : 0, ht: ht || 0 },
         });
       } catch {
         // a transient KV error (quota, oversized key) must not 500 the beat —
