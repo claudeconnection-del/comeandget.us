@@ -8,7 +8,7 @@
     "dev": "wrangler pages dev",
     "validate": "html-validate \"site/**/*.html\"",
     "test": "playwright test",
-    "test:tools": "node --test tools/test/",
+    "test:tools": "node --test \"tools/test/**/*.test.mjs\"",
     "seed:gauntlet": "node tools/seed-gauntlet.mjs",
     "ci": "npm run validate && npm run test:tools && npm test"
   },
