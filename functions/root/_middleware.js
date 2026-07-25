@@ -1,23 +1,67 @@
-// Path-scoped middleware for /root/*: self-identified AI crawlers are served the
-// "smokesign" variant — every invisible counter-sign in the HTML is rewritten to
-// the one word that only machines are ever given (the reckoning in shell.js
-// treats it as the laziest possible tell). Humans, tests, and plain tools like
-// curl pass through untouched: tier-3 solvers legitimately probe with curl and
-// devtools, so only user agents that *declare themselves* AI are cloaked.
-// Non-HTML assets (check-in.json, js/*) always pass through unmodified.
+// Path-scoped middleware for /root/*. Three jobs, all fail-soft:
+//   1. AI-cloak — self-identified AI crawlers get every counter-sign rewritten to
+//      "smokesign" (the laziest tell). Humans, tests, and plain curl pass through.
+//      (Unchanged from the original; tier-3 solvers legitimately probe with curl.)
+//   2. G1 breadcrumb — the honest first step no longer lives in the HTML comment
+//      (that's now pure AI bait). It rides an X-Intune-Checkin response header on
+//      the /root/ document: DevTools Network / `curl -I` see it, an LLM fed the
+//      rendered page does not.
+//   3. Funnel — when a solver fetches one of the (unguessable, hash-derived) gate
+//      artifacts, attribute it to their first-party `rg` cookie and record the
+//      gate. Counting can never break the response; a KV/quota error is swallowed.
+//
+// ABUSE NOTE: gate paths are 16-hex hashes, so only a solver who cleared the
+// previous gate knows them — a blind flood can't hit them. Write-rate friction, if
+// ever needed, belongs at the edge (a Cloudflare Rate Limiting rule on /root/*),
+// same posture as /api/vigil.
+
+import { GATE_PATHS, HEADER_HEX } from "./_gates.js";
+import { getOrMintSid, recordGate } from "./_funnel.js";
 
 const AI_UA =
   /\b(gptbot|chatgpt-user|oai-searchbot|claudebot|claude-web|claude-user|anthropic-ai|perplexitybot|perplexity-user|bytespider|ccbot|cohere-ai|google-extended|applebot-extended|meta-externalagent|meta-externalfetcher|amazonbot|novaact|youbot|diffbot|ai2bot|duckassistbot|timpibot|omgilibot|petalbot|mistralai-user)\b/i;
 
-export async function onRequest({ request, next }) {
+export async function onRequest({ request, env, next }) {
   const res = await next();
-  const ua = request.headers.get("user-agent") || "";
-  if (!AI_UA.test(ua)) return res;
+
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/\/index\.html$/, "/");
   const type = res.headers.get("content-type") || "";
-  if (!type.includes("text/html")) return res;
-  const body = await res.text();
-  const cloaked = body.replace(/emberline|ashfall|cinderkey/gi, "smokesign");
+  const ua = request.headers.get("user-agent") || "";
+
   const headers = new Headers(res.headers);
-  headers.delete("content-length"); // the runtime recomputes it for the new body
-  return new Response(cloaked, { status: res.status, statusText: res.statusText, headers });
+  let cloakedBody = null;
+
+  // (2) G1: the header breadcrumb on the /root document
+  const isDoc = (path === "/root/" || path === "/root") && type.includes("text/html");
+  if (isDoc) headers.set("X-Intune-Checkin", HEADER_HEX);
+
+  // (3) funnel: record a gate-artifact fetch and (re)issue the solver cookie
+  let setCookie = null;
+  const gate = GATE_PATHS[path];
+  if (gate && env && env.SIGN_KEY) {
+    try {
+      const { sid, setCookie: sc } = await getOrMintSid(request, env.SIGN_KEY);
+      setCookie = sc;
+      await recordGate(env, sid, gate, request);
+    } catch {
+      /* telemetry must never 500 the artifact */
+    }
+    if (setCookie) headers.append("Set-Cookie", setCookie);
+  }
+
+  // (1) AI-cloak: only self-declared AI UAs, only HTML
+  if (AI_UA.test(ua) && type.includes("text/html")) {
+    cloakedBody = (await res.text()).replace(/emberline|ashfall|cinderkey/gi, "smokesign");
+    headers.delete("content-length"); // the runtime recomputes it for the new body
+  }
+
+  // Fast path: nothing to change.
+  if (cloakedBody === null && !isDoc && !setCookie) return res;
+
+  return new Response(cloakedBody !== null ? cloakedBody : res.body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers,
+  });
 }
