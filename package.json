@@ -8,7 +8,9 @@
     "dev": "wrangler pages dev",
     "validate": "html-validate \"site/**/*.html\"",
     "test": "playwright test",
-    "ci": "npm run validate && npm test"
+    "test:tools": "node --test tools/test/",
+    "seed:gauntlet": "node tools/seed-gauntlet.mjs",
+    "ci": "npm run validate && npm run test:tools && npm test"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
