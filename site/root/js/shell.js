@@ -42,7 +42,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   const FS = D({
     root: D({
       "check-in.json": F("// it's already on the wire. open the Network tab and read it where it lives."),
-      "notes.md": F("the device keeps checking in. the token it carries isn't signed.\nfollow where it points — literally, in DNS."),
+      "notes.md": F("the device keeps checking in. read the wire, not the walls —\nwhat the checkin *sends back* (the headers) says more than what it shows.\nthe token isn't signed; what it points at points at what it points at."),
       "flag.txt": F("Access Denied. there is no flag here — the prize is a reply."),
       "todo.txt": F("[x] join device to Entra\n[x] enroll in Intune\n[ ] rotate the token nobody signed\n[ ] stop whoever is reading this"),
       "readme.txt": F("if you are reading this, you already went further than most.\nthere is nothing in this filesystem that will solve it for you.\nthat is the point. keep digging where it actually counts."),
@@ -399,7 +399,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   const CMD = {
     help: () => [
       "commands: help  whoami  sudo  ls [-a]  cd <dir>  cat <file>  pwd  find <x>  tree",
-      "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
+      "          grep <x>  decode <str>  unseal <key> <blob>  dig  ping <h>  ps  net user  ipconfig",
       "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
       "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  cafe  clear  exit",
       "          present (others)  claim <code>  name <newname>",
@@ -893,6 +893,36 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     return r && r.reason ? r.reason : "that name won't take.";
   };
 
+  // unseal <key-hex> <sealed-base64 | /root/a/…> — AES-256-GCM open. The key is
+  // yours to assemble (sha256 of the four shards, ':'-joined, in order); this box
+  // never holds it. A real primitive: a wrong or misordered key fails closed.
+  CMD.unseal = (io) => {
+    const keyHex = (io.tokens[0] || "").toLowerCase();
+    const src = io.tokens[1] || "";
+    if (!/^[0-9a-f]{64}$/.test(keyHex) || !src) {
+      return "usage: unseal <key-hex> <sealed-base64 | /root/a/…>   (key = sha256 of the four shards, ':'-joined, in order)";
+    }
+    (async () => {
+      try {
+        const blobText = src.startsWith("/")
+          ? (await (await fetch(src)).text()).trim()
+          : src.trim();
+        const kb = Uint8Array.from(keyHex.match(/../g).map((h) => parseInt(h, 16)));
+        const raw = Uint8Array.from(atob(blobText), (c) => c.charCodeAt(0));
+        const key = await crypto.subtle.importKey("raw", kb, { name: "AES-GCM" }, false, ["decrypt"]);
+        const pt = new TextDecoder().decode(
+          await crypto.subtle.decrypt({ name: "AES-GCM", iv: raw.slice(0, 12) }, key, raw.slice(12))
+        );
+        if (flare) flare(700);
+        surge(500);
+        println("the seal gives: " + pt);
+      } catch {
+        println("the seal holds. a shard is wrong, or out of order.");
+      }
+    })();
+    return "working the lock…";
+  };
+
   // --- multi-step unlock ritual (flares harder each step) ---
   function startRitual() {
     state.ritual = { idx: 0 };
@@ -1008,6 +1038,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     tunnels: "TUNNELS(7) — 'cd tunnels'. it reshuffles every time you move. you will not map it. that is the point.",
     ping: "PING(8) — pings answer in many voices. none of them helpful.",
     messages: "MESSAGES(1) — a one-way feed from 'us'. new ones are flagged * NEW. also: inbox, transmissions.",
+    unseal: "UNSEAL(1) — unseal <key-hex> <sealed-base64|/root/a/…>. AES-256-GCM. the key is the four shards, sha256'd in order. we don't keep it; a wrong order fails shut.",
   };
   CMD.man = (io) => {
     const t = (io.tokens[0] || "").toLowerCase();
