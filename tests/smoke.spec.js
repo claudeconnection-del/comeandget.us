@@ -236,13 +236,19 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#rain")).toBeVisible();
     await expect(page.locator("#term")).toContainText("checked in", { timeout: 5000 });
 
-    // the JWT (alg:none) must decode and point the solver onward to the DNS step
+    // the JWT (alg:none) must decode and point the solver onward — but to the
+    // NEXT gate (the introspection hash), not straight to DNS. The gauntlet's G2
+    // hardening means the DNS terminal (_rabbit) is no longer named in the clear
+    // here; it only surfaces after G4 decryption.
     const res = await page.request.get("/root/check-in.json");
     expect(res.ok()).toBeTruthy();
     const token = (await res.json())._token;
-    const seg = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const payload = JSON.parse(Buffer.from(seg, "base64").toString("utf8"));
-    expect(payload.next.toLowerCase()).toContain("_rabbit");
+    const headerSeg = JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8"));
+    expect(headerSeg.alg).toBe("none");
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    expect(payload.next.toLowerCase()).toContain("introspect");
+    expect(payload.cnf.kid, "the kid claim is a key shard").toBeTruthy();
+    expect(JSON.stringify(payload).toLowerCase()).not.toContain("_rabbit");
 
     expect(errors, `unexpected errors: ${errors.join(" | ")}`).toEqual([]);
   });

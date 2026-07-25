@@ -1,0 +1,5 @@
+{
+  "sub": "device-introspection",
+  "status": "noncompliant",
+  "attestation": "the compliance evidence is an image: /root/a/878cbc787ed74c1d.png. read what is written in it — not what it shows."
+}
