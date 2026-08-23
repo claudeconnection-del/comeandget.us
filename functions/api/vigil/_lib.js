@@ -55,6 +55,14 @@ export function decodeRealPayload(id) {
 
 export const isLivingId = (id) => decodeRealPayload(id) !== null;
 
+// The reckoning's haunt tier, surfaced to KV so the tracker can measure the
+// AI-shortcut rate. Strict: only the exact numeric tiers 1/2/3 are honored — any
+// other shape (string, float, markup, object) collapses to 0. Self-applied only,
+// same trust model as the `e` echo brand: a beat can only tag its own record.
+export function hauntTier(v) {
+  return v === 1 || v === 2 || v === 3 ? v : 0;
+}
+
 // ---- HMAC tier token -------------------------------------------------------
 // token = base64url(tier "." exp) "." base64url(rawHmac)
 // Signed server-side with SIGN_KEY; verified on every beat so the roster (and

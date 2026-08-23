@@ -34,6 +34,21 @@ function loadAnswerNeedles() {
 
 const NEEDLES = loadAnswerNeedles();
 
+// Fail-CLOSED in CI. A green CI run must PROVE the "answers never ship" guard
+// actually ran — otherwise a green check is meaningless and could deploy a leak.
+// Locally an unarmed guard still skips (dev convenience); in CI an unarmed guard
+// is a hard error, so no build can go green — and deploy — with the guard silently
+// disabled. Returns true (allow skip) only when local AND unarmed.
+function leakGuardArmedOrSkip() {
+  if (NEEDLES.length) return false; // armed → run the guard, never skip
+  if (process.env.CI) {
+    throw new Error(
+      "LEAK GUARD UNARMED IN CI — set the PUZZLE_ANSWER repo secret so 'answers never ship' is enforced before any deploy."
+    );
+  }
+  return true; // local + unarmed → allow the convenience skip
+}
+
 // assert none of the forbidden needles appear in a blob of text
 function expectNoNeedles(text, where) {
   const low = (text || "").toLowerCase();
@@ -67,6 +82,11 @@ const SHIPPED = [
   "/root/js/ink.js",
   "/root/js/audio.js",
   "/root/js/vigil.js",
+  "/root/js/mirror.js",
+  "/root/js/mirror/probes.js",
+  "/root/js/mirror/sigil.js",
+  "/root/js/mirror/lines.js",
+  "/root/js/mirror/dossier.js",
   "/root/check-in.json",
   "/root/transmissions.json",
 ];
@@ -107,6 +127,14 @@ function readDevVar(key) {
 }
 
 test.describe("comeandget.us", () => {
+  // Clean analytics: the paths browsers/bots auto-request must never 4xx.
+  test("common auto-requested paths never return a client error", async ({ page }) => {
+    for (const p of ["/robots.txt", "/favicon.ico", "/apple-touch-icon.png"]) {
+      const res = await page.request.get(p); // follows the 302 to the real icon
+      expect(res.status(), `${p} must not be a 4xx/5xx (analytics noise)`).toBeLessThan(400);
+    }
+  });
+
   test("the door loads without errors", async ({ page }) => {
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
@@ -154,7 +182,7 @@ test.describe("comeandget.us", () => {
   });
 
   test("no puzzle answer appears in any shipped file or the DOM", async ({ page }) => {
-    test.skip(!NEEDLES.length, "set PUZZLE_ANSWER or secret/answer.txt to enable the leak guard");
+    test.skip(leakGuardArmedOrSkip(), "leak guard unarmed locally (set PUZZLE_ANSWER or secret/answer.txt)");
 
     await page.goto("/?wake=0");
     await page.keyboard.type("MOTHMAN"); // fully solved state — still must not contain any answer
@@ -174,7 +202,7 @@ test.describe("comeandget.us", () => {
   // file (CHECKPOINT.md, docs, configs, tests…), so a stray note can't leak the
   // secret into public git the way it once did. Scans `git ls-files`.
   test("no puzzle answer appears in any tracked repo file", () => {
-    test.skip(!NEEDLES.length, "set PUZZLE_ANSWER or secret/answer.txt to enable the guard");
+    test.skip(leakGuardArmedOrSkip(), "leak guard unarmed locally (set PUZZLE_ANSWER or secret/answer.txt)");
     const root = join(dirname(fileURLToPath(import.meta.url)), "..");
     const files = execSync("git ls-files", { cwd: root, encoding: "utf8" })
       .split("\n").map((s) => s.trim()).filter(Boolean);
@@ -208,13 +236,19 @@ test.describe("comeandget.us", () => {
     await expect(page.locator("#rain")).toBeVisible();
     await expect(page.locator("#term")).toContainText("checked in", { timeout: 5000 });
 
-    // the JWT (alg:none) must decode and point the solver onward to the DNS step
+    // the JWT (alg:none) must decode and point the solver onward — but to the
+    // NEXT gate (the introspection hash), not straight to DNS. The gauntlet's G2
+    // hardening means the DNS terminal (_rabbit) is no longer named in the clear
+    // here; it only surfaces after G4 decryption.
     const res = await page.request.get("/root/check-in.json");
     expect(res.ok()).toBeTruthy();
     const token = (await res.json())._token;
-    const seg = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const payload = JSON.parse(Buffer.from(seg, "base64").toString("utf8"));
-    expect(payload.next.toLowerCase()).toContain("_rabbit");
+    const headerSeg = JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8"));
+    expect(headerSeg.alg).toBe("none");
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    expect(payload.next.toLowerCase()).toContain("introspect");
+    expect(payload.cnf.kid, "the kid claim is a key shard").toBeTruthy();
+    expect(JSON.stringify(payload).toLowerCase()).not.toContain("_rabbit");
 
     expect(errors, `unexpected errors: ${errors.join(" | ")}`).toEqual([]);
   });
@@ -564,7 +598,7 @@ test.describe("comeandget.us", () => {
   test("name sanitization rejects needles and markup (server-side)", async ({ page }) => {
     const code = process.env.CODE_ARG1 || readDevVar("CODE_ARG1");
     test.skip(!code, "set CODE_ARG1 in .dev.vars or env to exercise name");
-    test.skip(!NEEDLES.length, "set PUZZLE_ANSWER or secret/answer.txt to exercise needle rejection");
+    test.skip(leakGuardArmedOrSkip(), "leak guard unarmed locally (set PUZZLE_ANSWER or secret/answer.txt)");
 
     await page.goto("/root/");
 

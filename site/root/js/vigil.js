@@ -81,6 +81,19 @@ function hauntEcho() {
   }
 }
 
+// The granular reckoning tier (0–3) for the tracker's AI-shortcut metric. Rides
+// the beat as `ht`; the server keeps it in KV but never puts it on the public
+// roster (unlike the tier-3 `e` brand, which everyone sees).
+function hauntTierLocal() {
+  try {
+    const h = JSON.parse(localStorage.getItem("cg.haunt") || "null");
+    const t = h && Number(h.tier);
+    return t === 1 || t === 2 || t === 3 ? t : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function createVigil({ flare, audio, mount, decodeId } = {}) {
   const HEARTBEAT_MS = 45000;
   const MAX_CHIPS = 8; // cap the stack so it never buries the screen / input
@@ -211,7 +224,7 @@ export function createVigil({ flare, audio, mount, decodeId } = {}) {
       const res = await fetch("/api/vigil/beat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id, name: name || undefined, token: token || undefined, e: hauntEcho() ? 1 : undefined }),
+        body: JSON.stringify({ id, name: name || undefined, token: token || undefined, e: hauntEcho() ? 1 : undefined, ht: hauntTierLocal() || undefined }),
       });
       if (!res.ok) return null;
       const data = await res.json();

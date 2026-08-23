@@ -1,0 +1,7 @@
+# Kill the recurring 4xx from clients that auto-request legacy icon paths.
+# The site ships an SVG favicon (linked in <head>), but browsers, bots, and
+# link-preview crawlers still probe these fixed paths — each a 404 otherwise.
+# A 302 to the real icon is a 3xx, not a 4xx, so analytics stay clean.
+/favicon.ico                       /favicon.svg   302
+/apple-touch-icon.png              /favicon.svg   302
+/apple-touch-icon-precomposed.png  /favicon.svg   302

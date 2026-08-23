@@ -1,0 +1,1 @@
+dig TXT _rabbit.comeandget.us — decode the record, then answer the riddle in the subject line to please@comeandget.us

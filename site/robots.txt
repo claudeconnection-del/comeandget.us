@@ -1,0 +1,5 @@
+# you read the robots file. of course you did.
+# the front door is meant to be found. the machinery keeps its own counsel.
+User-agent: *
+Allow: /
+Disallow: /api/

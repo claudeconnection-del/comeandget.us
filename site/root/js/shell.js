@@ -12,7 +12,7 @@ import { startBreakout } from "./breakout.js";
 import { startTetris } from "./tetris.js";
 import { shade, lighten } from "./ink.js";
 
-export function initTerminal({ term, input, form, decode, flare, setPalette, setLite, audio, vigil }) {
+export function initTerminal({ term, input, form, decode, flare, setPalette, setLite, audio, vigil, getMirror }) {
   function println(text = "") {
     term.appendChild(document.createTextNode((Array.isArray(text) ? text.join("\n") : text) + "\n"));
     // bound scrollback so a very long session can't grow the DOM forever
@@ -42,7 +42,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   const FS = D({
     root: D({
       "check-in.json": F("// it's already on the wire. open the Network tab and read it where it lives."),
-      "notes.md": F("the device keeps checking in. the token it carries isn't signed.\nfollow where it points — literally, in DNS."),
+      "notes.md": F("the device keeps checking in. read the wire, not the walls —\nwhat the checkin *sends back* (the headers) says more than what it shows.\nthe token isn't signed; what it points at points at what it points at."),
       "flag.txt": F("Access Denied. there is no flag here — the prize is a reply."),
       "todo.txt": F("[x] join device to Entra\n[x] enroll in Intune\n[ ] rotate the token nobody signed\n[ ] stop whoever is reading this"),
       "readme.txt": F("if you are reading this, you already went further than most.\nthere is nothing in this filesystem that will solve it for you.\nthat is the point. keep digging where it actually counts."),
@@ -399,8 +399,8 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
   const CMD = {
     help: () => [
       "commands: help  whoami  sudo  ls [-a]  cd <dir>  cat <file>  pwd  find <x>  tree",
-      "          grep <x>  decode <str>  dig  ping <h>  ps  net user  ipconfig  netstat",
-      "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
+      "          grep <x>  decode <str>  unseal <key> <blob>  dig  ping <h>  ps  net user  ipconfig",
+      "          klist  token  systeminfo  env  history  uptime  date  fortune  hint  progress",
       "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  cafe  clear  exit",
       "          present (others)  claim <code>  name <newname>",
       "          arcade: galaga  doom  snake  pong  breakout  tetris    ...and more.",
@@ -432,7 +432,22 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     w: () => ["USER      TTY    FROM           WHAT", "neo       pts/0  10.13.37.66    reading this", "us        pts/?  everywhere     watching", "you       pts/1  somewhere      (we see you)"].join("\n"),
     last: () => ["neo       pts/0   still logged in", "morpheus  pts/1   gone. unplugged.", "us        pts/?   never logged out", "you       pts/1   just now — still here"].join("\n"),
     finger: (io) => { const u = (io.rest || "").toLowerCase(); return (u && u in USERS) ? `Login: ${u}\nName: ${u}\nStatus: present, somehow.\nPlan:\n  watch. wait. answer the mail.` : "finger: no such user. point it elsewhere."; },
-    dsregcmd: () => "AzureAdJoined : YES\nTenantName : comeandget\nMDMUrl : Intune\nDeviceAuthStatus : SUCCESS (token replayed, nobody checked)",
+    dsregcmd: (io) => {
+      if (/\/status\b/i.test(io.rest || "")) {
+        // mirror.js loads via a dynamic import kicked off at page boot; if this
+        // command lands before that import settles, poll briefly instead of
+        // silently dropping the pull (getMirror() is a live closure — it'll
+        // start returning the real mirror the moment agent.js's .then() runs).
+        const tryReveal = (triesLeft) => {
+          const m = getMirror && getMirror();
+          if (m && m.reveal) { m.reveal("dsregcmd"); return; }
+          if (triesLeft > 0) setTimeout(() => tryReveal(triesLeft - 1), 150);
+        };
+        tryReveal(20); // ~3s window
+        return "AzureAdJoined : YES\n+ fetching live device posture from the tenant...";
+      }
+      return "AzureAdJoined : YES\nTenantName : comeandget\nMDMUrl : Intune\nDeviceAuthStatus : SUCCESS (token replayed, nobody checked)";
+    },
 
     // filesystem
     pwd: () => (state.maze ? mazePwd() : fmtPath(state.cwd)),
@@ -878,6 +893,67 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     return r && r.reason ? r.reason : "that name won't take.";
   };
 
+  // unseal <key-hex> <sealed-base64 | /root/a/…> — AES-256-GCM open. The key is
+  // yours to assemble (sha256 of the four shards, ':'-joined, in order); this box
+  // never holds it. A real primitive: a wrong or misordered key fails closed.
+  CMD.unseal = (io) => {
+    const keyHex = (io.tokens[0] || "").toLowerCase();
+    const src = io.tokens[1] || "";
+    if (!/^[0-9a-f]{64}$/.test(keyHex) || !src) {
+      return "usage: unseal <key-hex> <sealed-base64 | /root/a/…>   (key = sha256 of the four shards, ':'-joined, in order)";
+    }
+    (async () => {
+      try {
+        const blobText = src.startsWith("/")
+          ? (await (await fetch(src)).text()).trim()
+          : src.trim();
+        const kb = Uint8Array.from(keyHex.match(/../g).map((h) => parseInt(h, 16)));
+        const raw = Uint8Array.from(atob(blobText), (c) => c.charCodeAt(0));
+        const key = await crypto.subtle.importKey("raw", kb, { name: "AES-GCM" }, false, ["decrypt"]);
+        const pt = new TextDecoder().decode(
+          await crypto.subtle.decrypt({ name: "AES-GCM", iv: raw.slice(0, 12) }, key, raw.slice(12))
+        );
+        if (flare) flare(700);
+        surge(500);
+        println("the seal gives: " + pt);
+      } catch {
+        println("the seal holds. a shard is wrong, or out of order.");
+      }
+    })();
+    return "working the lock…";
+  };
+
+  // progress — the ledger. Aggregate only: how many came, how far they got. The
+  // last number is deliberately absent; it lives in an inbox, not on this box.
+  CMD.progress = () => {
+    (async () => {
+      try {
+        const res = await fetch("/root/progress/data", { headers: { accept: "application/json" } });
+        const d = await res.json();
+        if (!d || d.ok !== true) { println("the ledger is unreachable."); return; }
+
+        const top = Math.max(...d.rungs.map((r) => r.count), 1);
+        const rule = "  " + "-".repeat(38);
+
+        println("");
+        println(`  ${d.arrived} have stood at the door.`);
+        println(rule);
+        for (const r of d.rungs) {
+          const bar = "#".repeat(Math.round((r.count / top) * 16));
+          const you = d.you && d.you.rung === r.key ? "   <- you are here" : "";
+          println(`  ${r.label.padEnd(13)}${bar.padEnd(17)}${String(r.count).padStart(3)}${you}`);
+        }
+        println(rule);
+        println(`  ${d.terminal.label.padEnd(13)}${"".padEnd(17)}${"?".padStart(3)}`);
+        println("");
+        println("  the full ledger: /root/progress");
+      } catch {
+        println("the ledger is unreachable.");
+      }
+    })();
+    return "reading the ledger…";
+  };
+
   // --- multi-step unlock ritual (flares harder each step) ---
   function startRitual() {
     state.ritual = { idx: 0 };
@@ -993,6 +1069,8 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     tunnels: "TUNNELS(7) — 'cd tunnels'. it reshuffles every time you move. you will not map it. that is the point.",
     ping: "PING(8) — pings answer in many voices. none of them helpful.",
     messages: "MESSAGES(1) — a one-way feed from 'us'. new ones are flagged * NEW. also: inbox, transmissions.",
+    unseal: "UNSEAL(1) — unseal <key-hex> <sealed-base64|/root/a/…>. AES-256-GCM. the key is the four shards, sha256'd in order. we don't keep it; a wrong order fails shut.",
+    progress: "PROGRESS(1) — the ledger. how many came, how far they got. counted, never guessed. the last number is not ours to give. the full board: /root/progress",
   };
   CMD.man = (io) => {
     const t = (io.tokens[0] || "").toLowerCase();

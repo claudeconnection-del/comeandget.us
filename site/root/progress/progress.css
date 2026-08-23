@@ -1,0 +1,157 @@
+/* The ledger. ember.css supplies the palette and the rain; everything here either
+   undoes the terminal's geometry (a fixed 32rem console with the scroll locked is
+   right for a shell and wrong for a document) or belongs to the board alone.
+
+   One idea carries the page: the reply is set larger than every real number on it.
+   The figure nobody can measure is the loudest thing here. Everything else stays
+   quiet so that it lands — flat bars, two rules, no third accent. */
+
+html, body { overflow: auto; }
+
+body.board-body {
+  display: block;
+  place-items: initial;
+  cursor: default;
+  min-height: 100svh;
+}
+
+main.board {
+  height: auto;
+  width: min(760px, 92vw);
+  margin: clamp(2rem, 9vh, 7rem) auto;
+  padding: clamp(1.5rem, 4vw, 2.8rem);
+}
+
+/* ---- masthead: the one uppercase voice on the page, so it reads as a report
+   header rather than as more shell output ---- */
+.masthead h1 {
+  font-size: clamp(0.95rem, 3.2vw, 1.35rem);
+  font-weight: 500;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--term-fg);
+}
+
+.masthead .sub {
+  margin-top: 0.55rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  color: var(--ember-dim);
+}
+
+.state { margin-top: 1.7rem; color: var(--ash); font-size: 0.88rem; }
+main.board[data-state="ok"] .state { display: none; }
+
+/* ---- the door: context, deliberately not a rung ---- */
+.door {
+  margin-top: 2.3rem;
+  padding-bottom: 1.15rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ember) 16%, transparent);
+  color: var(--ash);
+  font-size: 0.94rem;
+}
+.door b { color: var(--spark); font-weight: 500; }
+
+/* ---- the chain ---- */
+.ladder { margin-top: 1.6rem; display: grid; gap: 0.6rem; }
+
+.rung {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr 3.4rem;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.9rem;
+}
+
+.rung .label { color: var(--ash); letter-spacing: 0.03em; }
+.rung .track { height: 0.6rem; background: color-mix(in srgb, var(--ember) 7%, transparent); }
+
+.rung .bar {
+  display: block;
+  height: 100%;
+  width: var(--w, 0%);
+  background: var(--ember);
+  transition: width 820ms cubic-bezier(.22, .61, .36, 1);
+}
+
+.rung .count {
+  text-align: right;
+  color: var(--spark);
+  font-variant-numeric: tabular-nums;
+}
+
+.rung[data-you="1"] .label::after {
+  content: " ← you";
+  color: var(--ember);
+  letter-spacing: 0;
+}
+
+/* ---- the horizon: where the instrumentation stops. A heavier rule than the
+   door's, because this one separates the measured from the unmeasurable. ---- */
+.rung--terminal {
+  margin-top: 1rem;
+  padding-top: 1.35rem;
+  align-items: baseline;
+  border-top: 1px solid color-mix(in srgb, var(--ember) 66%, transparent);
+}
+.rung--terminal .track { background: none; }
+.rung--terminal .count {
+  font-size: clamp(1.9rem, 6vw, 2.6rem);
+  line-height: 1;
+  color: var(--ember);
+}
+
+.horizon-note {
+  margin-top: 0.7rem;
+  color: color-mix(in srgb, var(--ash) 78%, transparent);
+  font-size: 0.78rem;
+  max-width: 44ch;
+}
+
+/* ---- secondary figures ---- */
+.asides { margin-top: 2.3rem; display: flex; flex-wrap: wrap; gap: 2rem; }
+.asides div { display: grid; gap: 0.3rem; }
+.asides dt {
+  font-size: 0.66rem;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--ember-dim);
+}
+.asides dd {
+  margin: 0;
+  color: var(--spark);
+  font-size: 1.02rem;
+  font-variant-numeric: tabular-nums;
+}
+.asides dd.muted { color: var(--ash); font-size: 0.82rem; }
+
+/* ---- the methodology is the reason to believe the board, so it is set as
+   real text rather than fine print ---- */
+.method {
+  margin-top: 2.8rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid color-mix(in srgb, var(--ember) 12%, transparent);
+  color: color-mix(in srgb, var(--ash) 72%, transparent);
+  font-size: 0.73rem;
+  line-height: 1.8;
+}
+.method h2 {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--ember-dim);
+  margin-bottom: 0.8rem;
+}
+.method p { margin-bottom: 0.6rem; max-width: 68ch; }
+
+.noscript { color: var(--ash); text-align: center; padding: 2rem; }
+
+@media (max-width: 460px) {
+  .rung { grid-template-columns: 6.6rem 1fr 2.8rem; font-size: 0.82rem; }
+  .rung[data-you="1"] .label::after { content: " ←"; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rung .bar { transition: none; }
+}
