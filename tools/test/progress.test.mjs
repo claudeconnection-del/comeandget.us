@@ -120,3 +120,15 @@ test("fromRollup on an absent rollup yields nothing to serve", () => {
   assert.equal(fromRollup(null), null);
   assert.equal(fromRollup({ counts: {} }), null);
 });
+
+test("readReals fails soft when KV.list throws (quota, transient) instead of 500ing", async () => {
+  const { readReals } = await import("../../functions/api/vigil/index.js");
+  const env = {
+    PRESENCE: {
+      async list() { throw new Error("KV list() limit exceeded for the day."); },
+      async get() { return null; },
+    },
+  };
+  const reals = await readReals(env);
+  assert.deepEqual(reals, [], "a list failure must degrade to an empty roster, not throw");
+});

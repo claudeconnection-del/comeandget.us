@@ -24,6 +24,7 @@ export async function readReals(env, now = Date.now()) {
   if (!KV) return reals;
   const nowSec = Math.floor(now / 1000);
   let cursor;
+  try {
   outer: do {
     const res = await KV.list({ prefix: "p:", cursor });
     for (const key of res.keys) {
@@ -60,6 +61,14 @@ export async function readReals(env, now = Date.now()) {
     }
     cursor = res.list_complete ? undefined : res.cursor;
   } while (cursor);
+  } catch {
+    // KV.list can fail for reasons that are nothing to do with this request —
+    // most often the namespace's daily list budget, which the roster's own
+    // polling is the largest consumer of. The roster is decorative: degrade to
+    // whatever was gathered (ghosts still render on top) rather than 500 the
+    // endpoint, matching the fail-soft posture everywhere else in this codebase.
+    return reals;
+  }
   return reals;
 }
 
