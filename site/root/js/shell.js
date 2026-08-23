@@ -400,7 +400,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     help: () => [
       "commands: help  whoami  sudo  ls [-a]  cd <dir>  cat <file>  pwd  find <x>  tree",
       "          grep <x>  decode <str>  unseal <key> <blob>  dig  ping <h>  ps  net user  ipconfig",
-      "          klist  token  systeminfo  env  history  uptime  date  fortune  hint",
+      "          klist  token  systeminfo  env  history  uptime  date  fortune  hint  progress",
       "          man <x>  echo <x>  theme <name>  lite  ritual  games  messages  cafe  clear  exit",
       "          present (others)  claim <code>  name <newname>",
       "          arcade: galaga  doom  snake  pong  breakout  tetris    ...and more.",
@@ -923,6 +923,37 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     return "working the lock…";
   };
 
+  // progress — the ledger. Aggregate only: how many came, how far they got. The
+  // last number is deliberately absent; it lives in an inbox, not on this box.
+  CMD.progress = () => {
+    (async () => {
+      try {
+        const res = await fetch("/root/progress/data", { headers: { accept: "application/json" } });
+        const d = await res.json();
+        if (!d || d.ok !== true) { println("the ledger is unreachable."); return; }
+
+        const top = Math.max(...d.rungs.map((r) => r.count), 1);
+        const rule = "  " + "-".repeat(38);
+
+        println("");
+        println(`  ${d.arrived} have stood at the door.`);
+        println(rule);
+        for (const r of d.rungs) {
+          const bar = "#".repeat(Math.round((r.count / top) * 16));
+          const you = d.you && d.you.rung === r.key ? "   <- you are here" : "";
+          println(`  ${r.label.padEnd(13)}${bar.padEnd(17)}${String(r.count).padStart(3)}${you}`);
+        }
+        println(rule);
+        println(`  ${d.terminal.label.padEnd(13)}${"".padEnd(17)}${"?".padStart(3)}`);
+        println("");
+        println("  the full ledger: /root/progress");
+      } catch {
+        println("the ledger is unreachable.");
+      }
+    })();
+    return "reading the ledger…";
+  };
+
   // --- multi-step unlock ritual (flares harder each step) ---
   function startRitual() {
     state.ritual = { idx: 0 };
@@ -1039,6 +1070,7 @@ export function initTerminal({ term, input, form, decode, flare, setPalette, set
     ping: "PING(8) — pings answer in many voices. none of them helpful.",
     messages: "MESSAGES(1) — a one-way feed from 'us'. new ones are flagged * NEW. also: inbox, transmissions.",
     unseal: "UNSEAL(1) — unseal <key-hex> <sealed-base64|/root/a/…>. AES-256-GCM. the key is the four shards, sha256'd in order. we don't keep it; a wrong order fails shut.",
+    progress: "PROGRESS(1) — the ledger. how many came, how far they got. counted, never guessed. the last number is not ours to give. the full board: /root/progress",
   };
   CMD.man = (io) => {
     const t = (io.tokens[0] || "").toLowerCase();

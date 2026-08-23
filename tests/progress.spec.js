@@ -145,3 +145,44 @@ test.describe("the board", () => {
     expect(html).toContain("noindex");
   });
 });
+
+test.describe("the progress command", () => {
+  const type = async (page, cmd) => {
+    await page.fill("#cmd", cmd);
+    await page.press("#cmd", "Enter");
+  };
+
+  test("prints the ladder and points at the page", async ({ page }) => {
+    await page.goto("/root/");
+    await type(page, "progress");
+
+    const term = page.locator("#term");
+    await expect(term).toContainText("the wire", { timeout: 10000 });
+    await expect(term).toContainText("the reply");
+    await expect(term).toContainText("stood at the door");
+    await expect(term).toContainText("/root/progress");
+  });
+
+  test("progress is discoverable from help and man", async ({ page }) => {
+    await page.goto("/root/");
+    await type(page, "help");
+    await expect(page.locator("#term")).toContainText("progress");
+
+    await type(page, "man progress");
+    await expect(page.locator("#term")).toContainText("PROGRESS(1)");
+  });
+
+  test("an unreachable ledger says so in the terminal, with no numbers", async ({ page }) => {
+    await page.route("**/root/progress/data", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, reason: "unavailable" }),
+      })
+    );
+    await page.goto("/root/");
+    await type(page, "progress");
+    await expect(page.locator("#term")).toContainText("the ledger is unreachable", { timeout: 10000 });
+    await expect(page.locator("#term")).not.toContainText("stood at the door");
+  });
+});
