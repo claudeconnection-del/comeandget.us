@@ -28,7 +28,18 @@ const JSON_HEADERS = {
 };
 
 const reply = (obj) => new Response(JSON.stringify(obj), { status: 200, headers: JSON_HEADERS });
-const unavailable = () => reply({ ok: false, reason: "unavailable" });
+
+// Two different unreachable states, kept apart on purpose. "not-configured" is a
+// deployment problem that will never fix itself; "read-failed" is transient and
+// worth retrying. Both render as "unreachable" on the page — neither ever carries
+// a counts object, so no client can paint an outage as zeroes — but an operator
+// reading the JSON can tell which one they have without production log access.
+const unavailable = (reason, err) =>
+  reply({
+    ok: false,
+    reason,
+    ...(err ? { detail: `${err.name || "Error"}: ${String(err.message || err).slice(0, 160)}` } : {}),
+  });
 
 function readCookie(request, name) {
   const raw = request.headers.get("Cookie") || "";
@@ -91,7 +102,7 @@ async function viewerPosition(KV, request, signKey) {
 export async function onRequest(context) {
   const { request, env } = context;
   const KV = env && env.PRESENCE;
-  if (!KV) return unavailable();
+  if (!KV) return unavailable("not-configured");
 
   try {
     const now = Math.floor(Date.now() / 1000);
@@ -113,8 +124,8 @@ export async function onRequest(context) {
     const you = await viewerPosition(KV, request, env.SIGN_KEY);
 
     return reply({ ok: true, asOf: now, truncated, you, ...summary });
-  } catch {
+  } catch (err) {
     // A KV outage renders as "unreachable", never as a board of zeroes.
-    return unavailable();
+    return unavailable("read-failed", err);
   }
 }
