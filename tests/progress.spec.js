@@ -28,3 +28,43 @@ test.describe("the door counts arrivals", () => {
     expect(res.headers()["x-intune-checkin"]).toBeTruthy();
   });
 });
+
+test.describe("the ledger endpoint", () => {
+  test("serves an exact, private, cookie-varying summary", async ({ page }) => {
+    const res = await page.request.get("/root/progress/data");
+    expect(res.ok()).toBeTruthy();
+    expect(res.headers()["cache-control"]).toContain("private");
+    expect((res.headers()["vary"] || "").toLowerCase()).toContain("cookie");
+
+    const d = await res.json();
+    expect(d.ok).toBe(true);
+    expect(d.rungs.map((r) => r.key)).toEqual(["g1", "g2", "g3", "g4seal", "g4open"]);
+    expect(d.rungs.map((r) => r.label)).toEqual([
+      "the wire", "the token", "the shape", "the seal", "the opening",
+    ]);
+    expect(d.terminal).toEqual({ label: "the reply", count: null });
+    expect(typeof d.arrived).toBe("number");
+    expect(typeof d.asOf).toBe("number");
+  });
+
+  test("a real walk moves the real numbers", async ({ page }) => {
+    const before = await (await page.request.get("/root/progress/data")).json();
+    await page.request.get("/root/", {
+      headers: { "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+    });
+    await page.request.get("/root/check-in.json");
+    const after = await (await page.request.get("/root/progress/data")).json();
+
+    expect(after.arrived).toBeGreaterThanOrEqual(before.arrived + 1);
+    const wire = (d) => d.rungs.find((r) => r.key === "g1").count;
+    expect(wire(after)).toBeGreaterThanOrEqual(wire(before) + 1);
+    expect(after.you, "the viewer's own rung comes from their cookie").toBeTruthy();
+    expect(after.you.rung).toBe("g1");
+  });
+
+  test("counts never go backwards once recorded", async ({ page }) => {
+    const a = await (await page.request.get("/root/progress/data")).json();
+    const b = await (await page.request.get("/root/progress/data")).json();
+    expect(b.arrived).toBeGreaterThanOrEqual(a.arrived);
+  });
+});
