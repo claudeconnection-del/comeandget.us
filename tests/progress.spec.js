@@ -68,3 +68,80 @@ test.describe("the ledger endpoint", () => {
     expect(b.arrived).toBeGreaterThanOrEqual(a.arrived);
   });
 });
+
+test.describe("the board", () => {
+  test("renders the ladder, and the reply is never a number", async ({ page }) => {
+    await page.goto("/root/progress");
+    await expect(page.locator("main")).toHaveAttribute("data-state", /ok|empty/);
+
+    const reply = page.locator('[data-rung="terminal"] .count');
+    await expect(reply).toHaveText("?");
+
+    const counts = await page.locator('.rung:not([data-rung="terminal"]) .count').allTextContents();
+    expect(counts.length).toBe(5);
+    const nums = counts.map((t) => Number(t.replace(/\D/g, "")));
+    for (let i = 1; i < nums.length; i++) {
+      expect(nums[i], "the ladder must never climb").toBeLessThanOrEqual(nums[i - 1]);
+    }
+  });
+
+  test("an unreachable ledger shows no numbers at all", async ({ page }) => {
+    await page.route("**/root/progress/data", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, reason: "unavailable" }),
+      })
+    );
+    await page.goto("/root/progress");
+    await expect(page.locator("main")).toHaveAttribute("data-state", "unreachable");
+    await expect(page.locator(".rung")).toHaveCount(0);
+    await expect(page.locator("main")).toContainText("the ledger is unreachable");
+    await expect(page.locator("main")).not.toContainText("0");
+  });
+
+  test("an empty ledger shows real zeroes and says so", async ({ page }) => {
+    await page.route("**/root/progress/data", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true, asOf: 1756000000, since: null, arrived: 0, empty: true, truncated: false,
+          climbing: 0, pace: null, you: null,
+          rungs: [
+            { key: "g1", label: "the wire", count: 0 }, { key: "g2", label: "the token", count: 0 },
+            { key: "g3", label: "the shape", count: 0 }, { key: "g4seal", label: "the seal", count: 0 },
+            { key: "g4open", label: "the opening", count: 0 },
+          ],
+          terminal: { label: "the reply", count: null },
+        }),
+      })
+    );
+    await page.goto("/root/progress");
+    await expect(page.locator("main")).toHaveAttribute("data-state", "empty");
+    await expect(page.locator("#state")).toContainText("no one");
+  });
+
+  test("the board leaks nothing about the chain", async ({ page }) => {
+    const { GATE_PATHS, HEADER_HEX } = await import("../functions/root/_gates.js");
+    const sources = await Promise.all(
+      ["/root/progress", "/root/progress/progress.css", "/root/js/progress.js", "/root/progress/data"]
+        .map(async (p) => (await page.request.get(p)).text())
+    );
+    const haystack = sources.join("\n").toLowerCase();
+    for (const p of Object.keys(GATE_PATHS)) {
+      if (p === "/root/check-in.json") continue; // already public in the HTML comment
+      expect(haystack, `${p} must not appear on the board`).not.toContain(p.toLowerCase());
+    }
+    expect(haystack).not.toContain(HEADER_HEX.toLowerCase());
+    expect(haystack).not.toContain("_rabbit");
+    expect(haystack).not.toContain("_shard");
+    expect(haystack).not.toContain("please@");
+  });
+
+  test("the page is noindex, like the rest of /root", async ({ page }) => {
+    const html = await (await page.request.get("/root/progress")).text();
+    expect(html).toContain('name="robots"');
+    expect(html).toContain("noindex");
+  });
+});

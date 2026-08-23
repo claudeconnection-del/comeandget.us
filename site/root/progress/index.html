@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>the ledger — root@comeandget</title>
+  <meta name="description" content="how far anyone has got.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../ember.css">
+  <link rel="stylesheet" href="progress.css">
+</head>
+<body class="board-body">
+  <canvas id="rain" aria-hidden="true"></canvas>
+
+  <main class="board" data-state="loading" aria-busy="true">
+    <header class="masthead">
+      <h1>the root gauntlet</h1>
+      <p class="sub">the ledger<span id="since"></span></p>
+    </header>
+
+    <p class="state" id="state" role="status">reading the ledger…</p>
+
+    <p class="door" id="door"></p>
+
+    <div class="ladder" id="ladder"></div>
+
+    <p class="horizon-note" id="horizon-note"></p>
+
+    <dl class="asides" id="asides"></dl>
+
+    <footer class="method" id="method"></footer>
+  </main>
+
+  <noscript>
+    <p class="noscript">the ledger needs scripts. enable them and come back.</p>
+  </noscript>
+
+  <script type="module" src="../js/progress.js"></script>
+</body>
+</html>
