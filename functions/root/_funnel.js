@@ -76,7 +76,12 @@ export function uaClass(request) {
   return "other";
 }
 
-const GATE_ORDER = ["g1", "g2", "g3", "g4seal", "g4open"];
+// g0 is the door: the /root document itself. It sorts first so a solver who has
+// only arrived reports gmax "g0", which lets the board count the large, cheap
+// arrival population from the key listing alone — no value read required.
+const GATE_ORDER = ["g0", "g1", "g2", "g3", "g4seal", "g4open"];
+
+export const ARRIVAL = "g0";
 
 export async function recordGate(env, sid, gate, request) {
   const KV = env && env.PRESENCE;

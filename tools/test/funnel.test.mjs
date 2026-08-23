@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mintSid, verifySid, uaClass, recordGate } from "../../functions/root/_funnel.js";
+import { mintSid, verifySid, uaClass, recordGate, ARRIVAL } from "../../functions/root/_funnel.js";
 
 const reqWith = (headers) => ({ headers: { get: (k) => headers[k.toLowerCase()] ?? null } });
 
@@ -51,4 +51,33 @@ test("recordGate is a no-op without KV (fail-soft)", async () => {
   await recordGate({}, "sid1", "g1", reqWith({}));
   await recordGate({ PRESENCE: null }, "sid1", "g1", reqWith({}));
   // no throw = pass
+});
+
+test("an arrival records g0 and leaves gmax at the door", async () => {
+  const KV = fakeKV();
+  const env = { PRESENCE: KV };
+  const req = reqWith({ "user-agent": "Mozilla/5.0 (Windows NT 10.0)" });
+
+  assert.equal(ARRIVAL, "g0");
+  await recordGate(env, "sid9", ARRIVAL, req);
+  await recordGate(env, "sid9", ARRIVAL, req); // dedup: still one arrival
+
+  const entry = KV.store.get("fs:sid9");
+  const rec = JSON.parse(entry.value);
+  assert.ok(rec.g.g0 != null);
+  assert.equal(entry.metadata.gmax, "g0");
+  assert.equal(rec.ua, "browser");
+});
+
+test("a gate cleared after arrival advances gmax past the door", async () => {
+  const KV = fakeKV();
+  const env = { PRESENCE: KV };
+  const req = reqWith({ "user-agent": "Mozilla/5.0 (Windows NT 10.0)" });
+
+  await recordGate(env, "sid10", ARRIVAL, req);
+  await recordGate(env, "sid10", "g1", req);
+
+  const entry = KV.store.get("fs:sid10");
+  assert.equal(entry.metadata.gmax, "g1");
+  assert.ok(JSON.parse(entry.value).g.g0 != null, "the arrival stamp survives");
 });
