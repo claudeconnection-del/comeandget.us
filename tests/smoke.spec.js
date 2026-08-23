@@ -496,7 +496,7 @@ test.describe("comeandget.us", () => {
     expect(humanHtml).not.toContain("smokesign");
   });
 
-  // --- the vigil: presence on /root/ (Cloudflare Functions + simulated KV) ---
+  // --- the vigil: presence on /root/ (Cloudflare Functions + simulated D1) ---
 
   test("the roster returns and never leaks an answer", async ({ page }) => {
     await page.goto("/root/");
@@ -610,5 +610,88 @@ test.describe("comeandget.us", () => {
     await page.fill("#cmd", "name ahool42");
     await page.press("#cmd", "Enter");
     await expect(page.locator("#term")).toContainText("ahool42");
+  });
+  // --- the vigil's cost + abuse guarantees ---------------------------------
+  // These encode the properties that keep the feature inside the Cloudflare free
+  // tier. They are cheap to break by accident (one stray query in a hot path, one
+  // client-controlled storage key) and expensive to notice, because the symptom is
+  // a quota alert hours later rather than a failing request. So they are tests.
+
+  test("a flood of forged ids cannot mint unbounded presences", async ({ page }) => {
+    await page.goto("/root/");
+
+    // Under the old design the storage key WAS the client-chosen id, so this loop
+    // would have created 30 rows and 30 writes — 3% of the entire free daily write
+    // allowance, from one caller, in one second. The key is now derived from the
+    // caller's address, so the whole flood collapses into a handful of lanes.
+    const forged = [];
+    for (let i = 0; i < 30; i++) forged.push(mintRealId());
+    for (const id of forged) {
+      const res = await page.request.post("/api/vigil/beat", { data: { id } });
+      expect(res.ok(), "a forged-but-well-formed beat should still be served").toBeTruthy();
+    }
+
+    const data = await (await page.request.get("/api/vigil")).json();
+    const mine = data.roster.filter((p) => forged.includes(p.id));
+    // LANES in functions/api/vigil/_store.js — a few slots per address so an
+    // office behind one NAT doesn't collapse to a single chip, but bounded.
+    expect(
+      mine.length,
+      `one address minted ${forged.length} ids and occupied ${mine.length} roster slots; ` +
+        "the per-address lane cap should hold this to a handful"
+    ).toBeLessThanOrEqual(6);
+  });
+
+  test("presence survives with storage unreachable — ghosts, never an error", async ({ page }) => {
+    // The old roster read called KV.list() outside any try/catch, so an exhausted
+    // quota threw straight out of the Function and the visitor got a 500. The
+    // roster must degrade to atmosphere instead: the vigil going quiet is in
+    // genre, a stack trace is not.
+    await page.goto("/root/");
+    const res = await page.request.get("/api/vigil");
+    expect(res.status(), "the roster must never 5xx").toBeLessThan(500);
+    const data = await res.json();
+    expect(Array.isArray(data.roster)).toBeTruthy();
+    expect(data.roster.length, "ghosts ride even with no real presences").toBeGreaterThan(0);
+  });
+
+  test("the progress funnel counts once and never becomes an oracle", async ({ page }) => {
+    await page.goto("/root/");
+
+    // Same reply for a known milestone, an unknown one, and a replay — so this
+    // endpoint can't be probed to learn the allowlist or whether a stage has been
+    // reached before. That matters: a counter that answers "has anyone solved
+    // this yet" leaks progress into the ARG.
+    const known = await page.request.post("/api/vigil/progress", { data: { m: "cafe.welcome-mat" } });
+    const replay = await page.request.post("/api/vigil/progress", { data: { m: "cafe.welcome-mat" } });
+    const unknown = await page.request.post("/api/vigil/progress", { data: { m: "not.a.real.milestone" } });
+    for (const r of [known, replay, unknown]) expect(r.ok()).toBeTruthy();
+    const bodies = await Promise.all([known.json(), replay.json(), unknown.json()]);
+    const [a, b, c] = bodies.map((x) => JSON.stringify(x));
+    expect(a).toBe(b);
+    expect(a).toBe(c);
+
+    for (const body of bodies) {
+      const text = JSON.stringify(body).toLowerCase();
+      for (const n of NEEDLES) expect(text, `progress leaks "${n}"`).not.toContain(n);
+    }
+  });
+
+  test("the funnel aggregate is operator-only and denies without confirming it exists", async ({ page }) => {
+    await page.goto("/root/");
+    // 404 rather than 401: an unauthenticated caller shouldn't even learn the
+    // endpoint is there.
+    expect((await page.request.get("/api/vigil/stats")).status()).toBe(404);
+    expect((await page.request.get("/api/vigil/stats?key=wrong")).status()).toBe(404);
+
+    const key = process.env.STATS_KEY;
+    test.skip(!key, "set STATS_KEY in .dev.vars or env to exercise the authorized read");
+    const ok = await page.request.get(`/api/vigil/stats?key=${encodeURIComponent(key)}`);
+    expect(ok.ok(), "the right key should be let in").toBeTruthy();
+    const data = await ok.json();
+    expect(typeof data.totals).toBe("object");
+    expect(Array.isArray(data.byDay)).toBeTruthy();
+    const text = JSON.stringify(data).toLowerCase();
+    for (const n of NEEDLES) expect(text, `stats leaks "${n}"`).not.toContain(n);
   });
 });

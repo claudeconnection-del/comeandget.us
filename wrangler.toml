@@ -12,9 +12,30 @@ name = "comeandget-us"
 pages_build_output_dir = "site"
 compatibility_date = "2024-12-01"
 
-# Shared, live presence state. The KV namespace named PRESENCE has been created
-# in Cloudflare and its id is set below. `wrangler pages dev` simulates this
-# binding locally from just the binding name, so no real id is needed for dev.
-[[kv_namespaces]]
-binding = "PRESENCE"
-id = "1cd08bd52a3049a5ba07372a5466b01d"
+# Shared, live presence state + the aggregate progress funnel.
+#
+# This is D1, not KV, and the reason is a single number: the free KV plan allows
+# 1,000 *list requests* per day, and rebuilding a roster from per-visitor KV keys
+# needed one list per heartbeat. That capped the whole site at roughly twelve
+# open-tab-hours a day. D1 has no list operation and its free allowance is
+# 5,000,000 rows read and 100,000 rows written per day, which this feature cannot
+# realistically reach — see functions/api/vigil/_store.js for the arithmetic.
+#
+# Both stay on the FREE plan deliberately. Free fails closed: over quota, storage
+# returns errors and nothing is ever charged. Workers Paid fails open — it removes
+# the ceiling rather than raising it, and Cloudflare offers no hard spend cap.
+#
+# `wrangler pages dev` simulates this binding locally from the binding name alone,
+# and the Functions self-provision their tables on cold start, so dev and CI need
+# no migration step. Production schema: functions/api/vigil/schema.sql.
+[[d1_databases]]
+binding = "VIGIL"
+database_name = "comeandget-us-vigil"
+database_id = "6104b3a9-da34-4f00-a6bd-3a9e765b73f8"
+
+# Cost guard. The only spend control Cloudflare actually offers for Workers is a
+# per-invocation CPU ceiling, so it is set even though this account is on the free
+# plan: if it is ever upgraded, this is already in place. Every vigil request is
+# a couple of HMACs and one small query; 50ms is generous.
+[limits]
+cpu_ms = 50

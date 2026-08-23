@@ -82,7 +82,20 @@ function hauntEcho() {
 }
 
 export function createVigil({ flare, audio, mount, decodeId } = {}) {
-  const HEARTBEAT_MS = 45000;
+  // Heartbeat pacing. Every beat is a Pages Function invocation, and the free
+  // plan allows 100,000 of those a day across the whole site, so the cadence is
+  // a budget decision as much as a feel decision:
+  //   - 60s while somebody is actually here,
+  //   - 5min once they have not touched anything for a few minutes (a tab left
+  //     open all weekend should cost almost nothing),
+  //   - exponential backoff on failure, so a struggling backend gets quieter
+  //     traffic rather than a retry storm.
+  // A presence lingers server-side for 10 minutes, so the idle cadence still
+  // keeps an open tab on the roster.
+  const BEAT_MS = 60000;
+  const IDLE_BEAT_MS = 300000;
+  const IDLE_AFTER_MS = 240000;
+  const MAX_BACKOFF_MS = 600000;
   const MAX_CHIPS = 8; // cap the stack so it never buries the screen / input
 
   let token = lsGet(LS.token) || "";
@@ -205,6 +218,10 @@ export function createVigil({ flare, audio, mount, decodeId } = {}) {
     renderStack();
   }
 
+  // Consecutive beat failures, for backoff. Reset on any success.
+  let failures = 0;
+  let retryAfterMs = 0;
+
   async function beat() {
     if (document.hidden) return null;
     try {
@@ -213,11 +230,23 @@ export function createVigil({ flare, audio, mount, decodeId } = {}) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ id, name: name || undefined, token: token || undefined, e: hauntEcho() ? 1 : undefined }),
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        failures += 1;
+        // A 429 tells us exactly how long to sit down for; take it literally.
+        // Anything else clears the hint, so the exponential backoff below takes
+        // over rather than staying pinned at the last Retry-After forever.
+        const ra = res.status === 429 ? Number(res.headers.get("retry-after")) : NaN;
+        retryAfterMs = isFinite(ra) && ra > 0 ? Math.min(ra, 3600) * 1000 : 0;
+        return null;
+      }
+      failures = 0;
+      retryAfterMs = 0;
       const data = await res.json();
       if (data && Array.isArray(data.roster)) applyRoster(data.roster);
       return data;
     } catch {
+      failures += 1;
+      retryAfterMs = 0;
       return null;
     }
   }
@@ -280,16 +309,46 @@ export function createVigil({ flare, audio, mount, decodeId } = {}) {
     return { id, tier, name: name || undefined };
   }
 
+  // ── the heartbeat loop ────────────────────────────────────────────────────
+  // A self-scheduling timeout rather than a fixed interval, so the cadence can
+  // respond to idleness and to failure instead of hammering on regardless.
+  let lastTouch = Date.now();
+  const noteTouch = () => {
+    const wasIdle = Date.now() - lastTouch > IDLE_AFTER_MS;
+    lastTouch = Date.now();
+    // Coming back from idle should feel immediate, not "up to five minutes".
+    if (wasIdle && !document.hidden) tick();
+  };
+
+  function nextDelay() {
+    if (retryAfterMs) return retryAfterMs;
+    if (failures > 0) {
+      return Math.min(MAX_BACKOFF_MS, BEAT_MS * Math.pow(2, Math.min(failures, 4)));
+    }
+    return Date.now() - lastTouch > IDLE_AFTER_MS ? IDLE_BEAT_MS : BEAT_MS;
+  }
+
+  function schedule() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(tick, nextDelay());
+  }
+
+  async function tick() {
+    await beat();
+    schedule();
+  }
+
   function start() {
     renderStack();
-    beat(); // immediate beat on load
-    if (timer) clearInterval(timer);
-    timer = setInterval(beat, HEARTBEAT_MS);
+    tick(); // immediate beat on load, then self-schedule
     startDrift();
     // beat again the moment the tab regains focus
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) beat();
+      if (!document.hidden) tick();
     });
+    for (const ev of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+      window.addEventListener(ev, noteTouch, { passive: true });
+    }
   }
 
   start();

@@ -1,36 +1,38 @@
-// POST /api/vigil/beat — upsert my presence (TTL), then return the merged roster
-// so one round-trip both refreshes and fetches.
+// POST /api/vigil/beat — refresh my presence, then return the merged roster so
+// one round-trip both registers and fetches.
 //
-// Body: { id, name?, token? }
+// Body: { id, name?, token?, e? }
 //  - id must be a well-formed living payload (base64url JSON, v===1, numeric b)
-//  - if token verifies, accept its tier and the sanitized name; else tier=0, no name
-//  - throttled: only re-put when missing/changed/near expiry (client beats ~45s)
-
-import {
-  decodeRealPayload,
-  verifyTier,
-  sanitizeName,
-  publicPresence,
-  handleFor,
-  json,
-} from "./_lib.js";
-import { buildRoster } from "./index.js";
-
-// A presence lingers ~10min and we only re-write KV when it's within 2min of
-// expiry, so one continuously-open tab writes ~once per ~8min (~180/day) — well
-// under the free-tier ~1000 writes/day cap, even with several concurrent viewers.
-// (Reads are cheap and the roster is "eventually consistent" anyway.)
+//  - if token verifies, accept its tier and the sanitized name; else tier 0, no name
 //
-// ABUSE NOTE: the id is client-chosen, so a malicious caller can mint unlimited
-// unique ids and force a KV write per request. The roster read is now bounded
-// (MAX_REALS in index.js), but the WRITE rate is best capped at the edge — add a
-// Cloudflare **Rate Limiting** rule on `/api/vigil/*` (per-IP). That is cheaper
-// and more correct than a KV-counter here, which would itself add a write per
-// request (defeating the purpose) and can't protect the daily quota anyway.
-const TTL_SECONDS = 600;
-const REPUT_WINDOW = 120; // re-put when within this many seconds of expiry
+// COST, which is the whole reason this file was rewritten:
+//   The old version did a KV.list on every beat to rebuild the roster. Free KV
+//   allows 1,000 list requests a day, so a 45s heartbeat exhausted the site's
+//   entire daily allowance in about twelve tab-hours. Now a beat costs:
+//     - zero storage ops when this isolate saw the same slot inside REFRESH_AFTER
+//     - one guarded upsert otherwise, which itself writes zero rows unless
+//       something actually changed or the row went stale
+//     - zero reads when the roster is still cached
+//   A caller hammering this endpoint from one address therefore consumes no
+//   quota at all after their first beat. See _store.js for why that holds.
 
-export async function onRequestPost({ request, env }) {
+import { decodeRealPayload, verifyTier, sanitizeName, publicPresence, handleFor, json } from "./_lib.js";
+import { buildRoster } from "./index.js";
+import { touchPresence, countMilestone, allow } from "./_store.js";
+
+export async function onRequestPost({ request, env, waitUntil }) {
+  const ctx = { waitUntil };
+
+  // A generous ceiling — well above any honest heartbeat, low enough to blunt a
+  // single-host flood before it reaches storage. Storage-less and per-isolate;
+  // the real boundary is the WAF rule documented in README.md.
+  if (!allow(request, "beat", 120, 60_000)) {
+    return new Response(JSON.stringify({ error: "too many" }), {
+      status: 429,
+      headers: { "content-type": "application/json; charset=utf-8", "retry-after": "60" },
+    });
+  }
+
   let body;
   try {
     body = await request.json();
@@ -53,51 +55,22 @@ export async function onRequestPost({ request, env }) {
   if (body.token) tier = await verifyTier(env && env.SIGN_KEY, body.token);
   const name = tier > 0 ? await sanitizeName(body.name) : null;
 
-  // the echo brand (self-applied by the reckoning, client-side). Strictly a
-  // boolean shape — any other value is dropped. It can only mark THIS id's own
-  // record, same trust model as the tier/name squash on re-beat.
+  // The echo brand (self-applied by the reckoning, client-side). Strictly a
+  // boolean shape — any other value is dropped. It can only ever mark the
+  // caller's OWN row, because the row is addressed by a server-derived slot.
   const echo = body.e === 1 || body.e === true;
 
-  const KV = env && env.PRESENCE;
+  const wrote = await touchPresence(
+    env,
+    request,
+    ctx,
+    { id, tier, name, echo, born: payload.b },
+    Date.now()
+  );
 
-  if (KV) {
-    const key = `p:${id}`;
-    let existing = null;
-    try {
-      existing = await KV.getWithMetadata(key, "json");
-    } catch {
-      existing = null;
-    }
-    const prev = existing && existing.value;
-    const writtenAt = existing && existing.metadata && existing.metadata.w;
-    const record = { b: payload.b, t: tier, name: name || undefined, e: echo ? 1 : undefined, last: nowSec };
-
-    const changed =
-      !prev ||
-      prev.t !== record.t ||
-      (prev.name || "") !== (record.name || "") ||
-      (prev.e || 0) !== (record.e || 0);
-    const nearExpiry =
-      !writtenAt || nowSec - writtenAt >= TTL_SECONDS - REPUT_WINDOW;
-
-    if (changed || nearExpiry) {
-      // Mirror the displayable record into metadata so the roster read can be
-      // served from KV.list alone (no per-key get — see readReals in index.js).
-      try {
-        await KV.put(key, JSON.stringify(record), {
-          expirationTtl: TTL_SECONDS,
-          metadata: { w: nowSec, t: tier, name: name || "", b: payload.b, e: echo ? 1 : 0 },
-        });
-      } catch {
-        // a transient KV error (quota, oversized key) must not 500 the beat —
-        // the roster below is still served (eventually consistent anyway).
-      }
-    }
-  }
-
-  // Build "you" authoritatively from what we just validated/wrote — KV list+get
-  // is eventually consistent, so we cannot rely on reading our own record back in
-  // the same request. Overlay it onto the roster so the response is correct now.
+  // Build "you" from what we just validated rather than reading it back: the
+  // roster is served from a cache and D1 reads are not guaranteed to reflect a
+  // write from the same request, so the response has to be authoritative here.
   const you = {
     id,
     handle: handleFor(payload.n != null ? payload.n : id, tier),
@@ -108,11 +81,28 @@ export async function onRequestPost({ request, env }) {
   };
 
   const now = Date.now();
-  const merged = await buildRoster(env, now);
+  const merged = await buildRoster(env, request, ctx, now);
   let roster = merged.map(publicPresence);
-  // overlay my own presence: replace a stale read-back if present, else add it
+  // Overlay my own presence: drop a cached copy of me, then put me first.
   roster = roster.filter((p) => p.id !== id);
   roster.unshift(publicPresence(you));
+
+  // Funnel signal — but only on a beat that actually wrote. A heartbeat that the
+  // guard declined is a no-op, and it should stay a no-op: piggybacking the
+  // milestone probes on every beat would reintroduce per-request storage chatter
+  // through the back door. countMilestone dedupes again on top of this.
+  if (wrote && ctx.waitUntil) {
+    const marks = ["root.entered"];
+    if (tier === 1) marks.push("root.claimed.cryptid");
+    if (tier === 2) marks.push("root.claimed.tech");
+    if (name) marks.push("root.named");
+    if (echo) marks.push("root.haunted");
+    ctx.waitUntil(
+      (async () => {
+        for (const m of marks) await countMilestone(env, request, ctx, m, now);
+      })()
+    );
+  }
 
   return json({ roster, you });
 }

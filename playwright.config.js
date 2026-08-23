@@ -16,8 +16,10 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: {
-    // exercise the real Functions + a locally simulated PRESENCE KV. Argument-free
-    // and config-driven: wrangler.toml supplies the directory + bindings.
+    // exercise the real Functions + a locally simulated VIGIL D1 database.
+    // Argument-free and config-driven: wrangler.toml supplies the directory +
+    // bindings. The Functions self-provision their tables, so there is no
+    // migration step to run first.
     command: `npx wrangler pages dev --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,

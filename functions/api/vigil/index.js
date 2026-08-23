@@ -1,5 +1,10 @@
-// GET /api/vigil — the roster: computed ghosts ∪ real presences from KV.
-// No KV writes. Reads are cheap (free tier ~100k/day).
+// GET /api/vigil — the roster: computed ghosts ∪ real presences.
+//
+// No writes. The one SELECT behind this is collapsed through an isolate memo and
+// the colo cache (see _store.js), so a crowd arriving together costs one query
+// per window rather than one per visitor. Storage trouble degrades to
+// ghosts-only — this endpoint must never hand a visitor an error, because the
+// vigil going quiet is in genre and a 500 is not.
 
 import {
   computeGhosts,
@@ -9,75 +14,56 @@ import {
   decodeRealPayload,
   json,
 } from "./_lib.js";
+import { readReals, MAX_REALS } from "./_store.js";
 
-// Cap on real presences folded into the roster. Bounds both the response size
-// and the per-request work regardless of how many keys live in KV, so a flood of
-// seeded ids can't turn a cheap roster read into an unbounded sweep. Ghosts ride
-// on top of this.
-const MAX_REALS = 50;
+// Shape a stored row into a roster entry. The id must STILL decode to a living
+// payload — the oracle invariant is re-checked on read as well as on write, so a
+// row can never present as real unless its id genuinely is.
+function asPresence(row, nowSec) {
+  const payload = decodeRealPayload(row && row.id);
+  if (!payload) return null;
+  const born = typeof row.born === "number" ? row.born : payload.b;
+  return {
+    id: row.id,
+    handle: handleFor(payload.n != null ? payload.n : row.id, row.tier || 0),
+    tier: row.tier || 0,
+    name: typeof row.name === "string" && row.name ? row.name : undefined,
+    e: row.echo ? 1 : undefined,
+    ageSec: Math.max(0, nowSec - born),
+    _ghost: false,
+  };
+}
 
-// Read the live real presences out of KV (prefix "p:"). List is eventually
-// consistent — a just-joined real may lag a few seconds. Acceptable for genre.
-export async function readReals(env, now = Date.now()) {
-  const reals = [];
-  const KV = env && env.PRESENCE;
-  if (!KV) return reals;
+export async function buildRoster(env, request, ctx, now = Date.now()) {
   const nowSec = Math.floor(now / 1000);
-  let cursor;
-  outer: do {
-    const res = await KV.list({ prefix: "p:", cursor });
-    for (const key of res.keys) {
-      const id = key.name.slice(2);
-      // the id itself must still decode to a living payload; skip anything that
-      // somehow doesn't (defends the oracle invariant on read, too)
-      const payload = decodeRealPayload(id);
-      if (!payload) continue;
-      // Prefer the metadata KV.list already returned — it carries the displayable
-      // record (t/name/b), so the common path performs NO per-key KV.get (this
-      // was an N+1 over every key on every roster read + beat). Fall back to a
-      // get only for legacy entries written before the record was mirrored into
-      // metadata.
-      let rec = key.metadata;
-      if (!rec || typeof rec.t === "undefined") {
-        try {
-          rec = await KV.get(key.name, "json");
-        } catch {
-          rec = null;
-        }
-      }
-      if (!rec) continue;
-      const b = typeof rec.b === "number" ? rec.b : payload.b;
-      reals.push({
-        id,
-        handle: handleFor(payload.n != null ? payload.n : id, rec.t || 0),
-        tier: rec.t || 0,
-        name: typeof rec.name === "string" && rec.name ? rec.name : undefined,
-        e: rec.e ? 1 : undefined,
-        ageSec: Math.max(0, nowSec - b),
-        _ghost: false,
-      });
-      if (reals.length >= MAX_REALS) break outer;
-    }
-    cursor = res.list_complete ? undefined : res.cursor;
-  } while (cursor);
-  return reals;
+  const rows = await readReals(env, request, ctx, now);
+
+  // Dedupe by id. Two rows can legitimately carry the same id (the same browser
+  // seen from two addresses), and a griefer could copy someone else's id into
+  // their own row; either way the roster shows one chip per identity.
+  const seen = new Set();
+  const reals = [];
+  for (const row of rows) {
+    if (seen.has(row.id)) continue;
+    const p = asPresence(row, nowSec);
+    if (!p) continue;
+    seen.add(row.id);
+    reals.push(p);
+    if (reals.length >= MAX_REALS) break;
+  }
+
+  const ghosts = computeGhosts(now);
+  const merged = [...ghosts, ...reals];
+  // Deterministic interleave keyed to a coarse time bucket: stable for a while,
+  // never frozen, and ghosts are never trivially clustered.
+  const seed = Math.floor(now / (1000 * 60)) ^ merged.length;
+  return shuffleDeterministic(merged, seed);
 }
 
-export function buildRoster(env, now = Date.now()) {
-  return Promise.resolve(readReals(env, now)).then((reals) => {
-    const ghosts = computeGhosts(now);
-    const merged = [...ghosts, ...reals];
-    // deterministic interleave keyed to a coarse time bucket so it's stable for
-    // a while but not frozen, and ghosts aren't clustered.
-    const seed = Math.floor(now / (1000 * 60)) ^ merged.length;
-    const shuffled = shuffleDeterministic(merged, seed);
-    return shuffled;
-  });
-}
-
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ env, request, waitUntil }) {
   const now = Date.now();
-  const merged = await buildRoster(env, now);
+  const ctx = { waitUntil };
+  const merged = await buildRoster(env, request, ctx, now);
   const roster = merged.map(publicPresence);
   return json({ roster, n: roster.length });
 }

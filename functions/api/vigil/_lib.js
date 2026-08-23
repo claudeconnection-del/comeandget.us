@@ -32,8 +32,10 @@ export function b64urlDecode(s) {
 // v===1 and a numeric b. Ghost ids encode plaintext, so they can never satisfy
 // this. Returns the parsed payload on success, or null.
 export function decodeRealPayload(id) {
-  // cap < 512 so the KV key "p:" + id stays within Cloudflare KV's 512-byte key
-  // limit (a longer id would make KV.put throw). Real ids are ~80-150 chars.
+  // Length cap so a caller can't hand us an enormous string to base64-decode and
+  // JSON.parse on every request. Real ids are ~80-150 chars. (This used to exist
+  // to keep the id inside KV's 512-byte key limit; the id is no longer a storage
+  // key, but bounding the parse work is worth keeping on its own merits.)
   if (typeof id !== "string" || !id || id.length > 500) return null;
   let txt;
   try {
@@ -60,7 +62,7 @@ export const isLivingId = (id) => decodeRealPayload(id) !== null;
 // Signed server-side with SIGN_KEY; verified on every beat so the roster (and
 // the proof-of-life payload the server echoes) can't be forged by a client.
 
-async function hmacRaw(signKey, msg) {
+export async function hmacRaw(signKey, msg) {
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(signKey),

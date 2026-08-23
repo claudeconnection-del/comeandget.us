@@ -3,6 +3,8 @@
 // artifacts carry only encoded forms, the manifest only hashes. Progress, hints,
 // and theme live in localStorage.
 
+import { mark } from "../../js/mark.js";
+
 // each family gets a small diamond in its own accent colour — quiet visual
 // identity without leaning on emoji.
 const FAM = {
@@ -192,11 +194,13 @@ export function cafeCommands() {
     if (got === c.flagHash) {
       const already = solvedSet().has(id);
       markSolved(id);
+      if (!already) mark("cafe." + id); // funnel only — see site/js/mark.js
       if (already) {
         api.print(api.sp("✓ ", "c-ok"), api.sp("already brewed — still counts.", "c-text"));
       } else {
         const n = solvedSet().size;
         api.print(api.sp("✓ ", "c-ok bold"), api.sp("nice — " + c.id + " solved.  ", "c-text"), api.sp("badge earned: ", "c-muted"), api.sp(c.badge.name, "c-accent"));
+        if (n === total) mark("cafe.cleared");
         if (n === total) api.print(api.sp("★ " + n + " / " + total + " — you cleared the whole café.", "c-warn"), api.sp("  the night shift tips their hats (those that have them). come back soon.", "c-ok"));
         else api.print(api.sp("★ " + n + " / " + total + " solved", "c-warn"), api.sp("  ·  next: ", "c-muted"), api.kbd("ls"));
       }

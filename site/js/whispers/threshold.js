@@ -1,4 +1,5 @@
 import { vigenere, sha256hex } from "../glyphs.js";
+import { mark } from "../mark.js";
 
 // sha256("MOTHMAN") — the key itself is never stored, only this fingerprint.
 const KEY_HASH = "94ab9ea33d821423babf837af3a3dc89d6dd62c9badf655708f98896fecc427d";
@@ -33,6 +34,7 @@ export default {
       sigil.textContent = plain.replace(/(.{4})/g, "$1 ").trim();
       stage.glitchBurst(1400);
       stage.say("it opens.", { revert: false });
+      mark("gate.opened"); // funnel only — see site/js/mark.js
       stage.reveal(
         `<span class="name">the seal breaks: <b>${plain}</b></span>` +
           `<a href="mailto:${addr}" id="door">▷ ${addr}</a>` +
