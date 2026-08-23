@@ -68,8 +68,14 @@ function methodology(d) {
     "A solver is a browser holding a signed cookie, not a person. Clearing cookies, or picking up a second device, makes a second solver.",
     "The door counts cookie-capable browsers only. Self-identified crawlers are excluded, and scripted clients are not counted there at all — which is why the wire can stand higher than the door. They are counted from the wire onward, like everyone else.",
     "The reply carries no number because this server cannot see one. It happens in an inbox. Rather than publish a figure nothing here can check, it stays a question mark.",
-    `Every figure above is counted, never estimated. Read at ${new Date(d.asOf * 1000).toLocaleTimeString()}.`,
+    d.asOf
+      ? `Every figure above is counted, never estimated. ${d.stale ? "Last recounted" : "Read"} at ${new Date(d.asOf * 1000).toLocaleTimeString()}.`
+      : "Every figure above is counted, never estimated.",
   ];
+  if (d.stale) {
+    lines.splice(-1, 0,
+      "These are the durable counts, recounted periodically rather than on every view — a full recount costs a shared daily budget the site also spends elsewhere. They are real totals; only their freshness lags.");
+  }
   if (d.truncated) {
     lines.unshift("The record listing reached its cap, so these counts are floors rather than totals.");
   }
@@ -83,7 +89,10 @@ function methodology(d) {
 
 function asides(d) {
   const items = [
-    ["still climbing", String(d.climbing), false],
+    // climbing is a live measure; when the ledger is serving durable counts it is
+    // null, and null must not render as 0 — that would claim nobody is climbing.
+    ["still climbing", d.climbing === null || d.climbing === undefined ? "—" : String(d.climbing),
+      d.climbing === null || d.climbing === undefined],
     ["fastest clear", d.pace ? duration(d.pace.fastest) : "—", false],
     ["typical clear", d.pace ? duration(d.pace.median) : "not enough finishers to say", !d.pace],
   ];

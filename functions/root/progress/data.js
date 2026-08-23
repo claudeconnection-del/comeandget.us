@@ -11,7 +11,7 @@
 // at all, so a client cannot accidentally render "nobody has tried" out of an
 // outage.
 
-import { summarize, reconcile, ARRIVAL_KEY, RUNGS } from "../_progress.js";
+import { summarize, reconcile, fromRollup, ARRIVAL_KEY, RUNGS } from "../_progress.js";
 import { verifySid } from "../_funnel.js";
 
 const PREFIX = "fs:";        // never "f:" — that would sweep the rollup key in
@@ -19,6 +19,14 @@ const ROLLUP_KEY = "f:rollup";
 const PAGE = 1000;           // KV list page size
 const MAX_KEYS = 10000;      // hard cap; if we hit it we say so rather than lie
 const BATCH = 16;            // concurrent value reads
+const REFRESH_SECONDS = 600; // how often a real listing is spent (~144/day worst case)
+
+// Tests and local dev set this to 0 so a walk is reflected immediately; production
+// leaves it unset and gets the interval above.
+const refreshAfter = (env) => {
+  const n = Number(env && env.PROGRESS_REFRESH_SECONDS);
+  return Number.isFinite(n) && n >= 0 ? n : REFRESH_SECONDS;
+};
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -104,28 +112,59 @@ export async function onRequest(context) {
   const KV = env && env.PRESENCE;
   if (!KV) return unavailable("not-configured");
 
-  try {
-    const now = Math.floor(Date.now() / 1000);
-    const { keys, truncated } = await listAll(KV);
-    const records = await loadRecords(KV, keys);
+  const now = Math.floor(Date.now() / 1000);
 
-    const live = summarize(records, { now });
-    const stored = await KV.get(ROLLUP_KEY, "json").catch(() => null);
-    const { summary, rollup, changed } = reconcile(live, stored);
+  // The rollup first, because it is a get and gets are effectively free. A full
+  // listing is NOT: KV allows a fixed number of list() operations per day and the
+  // roster already spends most of them. Listing once per page view would put the
+  // board in competition with the site's own presence feature for a shared budget
+  // — so the board reconciles on an interval and serves the durable counts between
+  // times. They are real counts either way; only their freshness differs.
+  const stored = await KV.get(ROLLUP_KEY, "json").catch(() => null);
+  const staleFor = now - (Number(stored && stored.updated) || 0);
+  const wantsRefresh = !stored || staleFor >= refreshAfter(env);
 
-    // High-water only, and only when it moved. max() is monotonic, so concurrent
-    // writers converge and a dropped write is repaired by the next render.
-    if (changed) {
+  const you = await viewerPosition(KV, request, env.SIGN_KEY);
+
+  if (wantsRefresh) {
+    try {
+      const { keys, truncated } = await listAll(KV);
+      const records = await loadRecords(KV, keys);
+      const { summary, rollup, changed } = reconcile(summarize(records, { now }), stored);
+
+      // High-water only. max() is monotonic, so concurrent writers converge and a
+      // dropped write is repaired by the next refresh. Always restamp `updated`,
+      // even when nothing moved, or an idle board would re-list on every view.
       context.waitUntil(
         KV.put(ROLLUP_KEY, JSON.stringify({ ...rollup, updated: now })).catch(() => {})
       );
+      void changed;
+
+      return reply({ ok: true, asOf: now, stale: false, truncated, you, ...summary });
+    } catch (err) {
+      // The listing failed — usually the daily list budget. Fall back to the last
+      // durable counts rather than showing nothing: they are true, just older.
+      const fallback = fromRollup(stored);
+      if (!fallback) return unavailable("read-failed", err);
+      return reply({
+        ok: true,
+        asOf: Number(stored.updated) || null,
+        stale: true,
+        truncated: false,
+        you,
+        ...fallback,
+      });
     }
-
-    const you = await viewerPosition(KV, request, env.SIGN_KEY);
-
-    return reply({ ok: true, asOf: now, truncated, you, ...summary });
-  } catch (err) {
-    // A KV outage renders as "unreachable", never as a board of zeroes.
-    return unavailable("read-failed", err);
   }
+
+  const summary = fromRollup(stored);
+  if (!summary) return unavailable("read-failed", new Error("rollup unreadable"));
+  return reply({
+    ok: true,
+    asOf: Number(stored.updated) || null,
+    stale: true,
+    truncated: false,
+    you,
+    ...summary,
+  });
 }

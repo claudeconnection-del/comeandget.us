@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { summarize, reconcile, RUNGS, ARRIVAL_KEY } from "../../functions/root/_progress.js";
+import { summarize, reconcile, fromRollup, RUNGS, ARRIVAL_KEY } from "../../functions/root/_progress.js";
 
 const NOW = 1_756_000_000;
 const DAY = 86_400;
@@ -102,4 +102,21 @@ test("reconcile against no stored rollup adopts the live counts", () => {
   assert.equal(summary.arrived, 1);
   assert.equal(rollup.counts.g1, 1);
   assert.equal(changed, true);
+});
+
+test("fromRollup serves durable counts when a live listing is impossible", () => {
+  const s = fromRollup({ v: 1, counts: { g0: 412, g1: 23, g2: 9, g3: 4, g4seal: 2, g4open: 1 }, since: 100 });
+  assert.equal(s.arrived, 412);
+  assert.equal(countOf(s, "g1"), 23);
+  assert.equal(s.since, 100);
+  assert.equal(s.empty, false);
+  // live-only measures must be null, never 0 — a zero here would be a lie
+  assert.equal(s.climbing, null);
+  assert.equal(s.pace, null);
+  assert.equal(s.terminal.count, null);
+});
+
+test("fromRollup on an absent rollup yields nothing to serve", () => {
+  assert.equal(fromRollup(null), null);
+  assert.equal(fromRollup({ counts: {} }), null);
 });

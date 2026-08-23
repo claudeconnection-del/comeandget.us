@@ -43,9 +43,12 @@ jobs:
         # SIGN_KEY arms the mirror/echo recognition tests; CODE_ARG1 arms the vigil
         # claim + server-side name/needle-rejection tests (claim.js compares the
         # submitted code to env.CODE_ARG1, so a throwaway that matches itself is
-        # accepted). Fixed literals so the test's readDevVar and the worker env
+        # accepted). PROGRESS_REFRESH_SECONDS=0 makes the progress board recount on
+        # every request instead of on its production interval, so the funnel tests
+        # can assert that a walk moves the counts immediately.
+        # Fixed literals so the test's readDevVar and the worker env
         # agree. Both are test-only — the real values live in Cloudflare.
-        run: printf 'SIGN_KEY=%s\nCODE_ARG1=%s\n' "ci-smoke-signing-key-not-real" "ci-smoke-claim-code" > .dev.vars
+        run: printf 'SIGN_KEY=%s\nCODE_ARG1=%s\nPROGRESS_REFRESH_SECONDS=%s\n' "ci-smoke-signing-key-not-real" "ci-smoke-claim-code" "0" > .dev.vars
       - name: Smoke test the puzzle
         run: npm test
         env:

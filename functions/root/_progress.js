@@ -96,6 +96,17 @@ export function summarize(records, { now }) {
   return build(counts, { climbing, pace, since });
 }
 
+// Build a summary from the durable rollup alone, for when a live listing is not
+// possible (KV's daily list budget is finite, and the roster spends most of it).
+// The counts are real — a monotonic high-water mark of things that actually
+// happened — but climbing and pace are live-only measures, so they come back null
+// rather than 0. A zero there would claim "nobody is climbing", which we do not know.
+export function fromRollup(stored) {
+  const counts = stored && stored.counts;
+  if (!counts || !COUNT_KEYS.some((k) => num(counts[k]))) return null;
+  return build(counts, { climbing: null, pace: null, since: num(stored.since) });
+}
+
 // Merge the live counts with the durable high-water mark. Counts only ever grow,
 // so max() is monotonic and idempotent: concurrent writers converge, and a lost
 // write is repaired by the next render. climbing and pace are deliberately NOT
