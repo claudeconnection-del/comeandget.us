@@ -43,6 +43,7 @@ site/                   # everything that crosses the threshold (deployed)
   root/                 # the rabbit hole (ARG 2: an M365/Intune honeypot)
     index.html  ember.css  js/*.js  check-in.json  transmissions.json
   CNAME                 # the true name of this place
+functions/_shared.js    # the one copy: security headers, base64url/HMAC, compares, cookies
 functions/api/vigil/    # Cloudflare Pages Functions: live presence ("vigil") + KV
 functions/root/         # middleware: self-declared AI crawlers get a decoy variant
 tests/smoke.spec.js     # proves the door works and leaks nothing (never deployed)

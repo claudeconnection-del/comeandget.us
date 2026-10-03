@@ -13,7 +13,7 @@
 
 import { summarize, reconcile, fromRollup, ARRIVAL_KEY, RUNGS } from "../_progress.js";
 import { verifySid } from "../_funnel.js";
-import { withSecurityHeaders } from "../../_shared.js";
+import { withSecurityHeaders, readCookie } from "../../_shared.js";
 
 const PREFIX = "fs:";        // never "f:" — that would sweep the rollup key in
 const ROLLUP_KEY = "f:rollup";
@@ -50,11 +50,6 @@ const unavailable = (reason, err) =>
     ...(err ? { detail: `${err.name || "Error"}: ${String(err.message || err).slice(0, 160)}` } : {}),
   });
 
-function readCookie(request, name) {
-  const raw = request.headers.get("Cookie") || "";
-  const m = raw.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
-  return m ? m[1] : null;
-}
 
 async function listAll(KV) {
   const keys = [];

@@ -20,7 +20,8 @@
 // posture as /api/vigil.
 
 import { GATE_PATHS, HEADER_HEX } from "./_gates.js";
-import { mintSid, verifySid, readCookie, recordGate, uaClass, ARRIVAL } from "./_funnel.js";
+import { mintSid, verifySid, recordGate, uaClass, ARRIVAL } from "./_funnel.js";
+import { readCookie } from "../_shared.js";
 
 const AI_UA =
   /\b(gptbot|chatgpt-user|oai-searchbot|claudebot|claude-web|claude-user|anthropic-ai|perplexitybot|perplexity-user|bytespider|ccbot|cohere-ai|google-extended|applebot-extended|meta-externalagent|meta-externalfetcher|amazonbot|novaact|youbot|diffbot|ai2bot|duckassistbot|timpibot|omgilibot|petalbot|mistralai-user)\b/i;

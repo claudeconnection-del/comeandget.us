@@ -10,10 +10,11 @@
 // This endpoint does NO KV write, so brute-force friction belongs at the edge:
 // add a Cloudflare **Rate Limiting** rule on `/api/vigil/*` (per-IP) rather than
 // a KV-counter (which would introduce writes where there are none). The compare
-// is already constant-time so a match can't be timed out (it does reveal code
-// LENGTH via the early length check — low risk for short shared codes).
+// hashes both sides before a constant-time check, so neither a match nor the
+// code's LENGTH can be timed out of it.
 
-import { timingSafeEqual, signTier, json } from "./_lib.js";
+import { signTier, json } from "./_lib.js";
+import { secretEquals } from "../../_shared.js";
 
 export async function onRequestPost({ request, env }) {
   let body;
@@ -30,9 +31,8 @@ export async function onRequestPost({ request, env }) {
   const c2 = (env && env.CODE_ARG2) || "";
   const signKey = (env && env.SIGN_KEY) || "";
 
-  // constant-time compare against each; never short-circuit on first mismatch
-  const m1 = c1 && timingSafeEqual(code, c1);
-  const m2 = c2 && timingSafeEqual(code, c2);
+  // both compared, always, over fixed-length digests — no early exit, no length tell
+  const [m1, m2] = await Promise.all([secretEquals(code, c1), secretEquals(code, c2)]);
 
   let tier = 0;
   if (m1) tier = 1;
