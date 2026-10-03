@@ -61,7 +61,7 @@ npm run dev          # wrangler pages dev — serves site/ + functions/ locally
 
 `.github/workflows/deploy.yml`:
 
-1. **ci** — `npm run validate` (HTML) + `npm test` (Playwright, via
+1. **ci** — `npm run validate` (HTML) + `npm run test:tools` (node unit tests) + `npm test` (Playwright, via
    `wrangler pages dev`): the page loads, a hidden being answers, the true key
    unseals the sigil and constructs the mailbox, the vigil API serves a roster
    without leaking, and — if a `PUZZLE_ANSWER` secret is configured — nothing in

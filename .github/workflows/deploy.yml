@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 # Supply chain: third-party actions are pinned to immutable commit SHAs (the
-# trailing `# vN` is the human-readable tag). To bump one, re-resolve with
+# trailing `# vN` is the human-readable tag). Dependabot (.github/dependabot.yml)
+# proposes bumps; to re-resolve one by hand:
 #   git ls-remote https://github.com/<owner>/<action> refs/tags/<vN>
 # and update BOTH the SHA and its comment.
 
@@ -22,15 +23,18 @@ jobs:
   ci:
     name: validate & smoke test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - name: Validate HTML
         run: npm run validate
+      - name: Unit test the tools and functions
+        run: npm run test:tools
       - name: Install Playwright (chromium)
         run: npx playwright install --with-deps chromium
       # Arm the local dev server (wrangler pages dev reads .dev.vars) with
@@ -53,7 +57,7 @@ jobs:
         run: npm test
         env:
           # REQUIRED: the PUZZLE_ANSWER repo secret arms the "answers never ship"
-          # leak guard. The guard is now FAIL-CLOSED in CI (tests/smoke.spec.js) —
+          # leak guard. The guard is FAIL-CLOSED in CI (tests/smoke.spec.js) —
           # if this secret is unset, the leak-guard tests ERROR rather than skip,
           # so no build can go green (and deploy) with the guard silently disabled.
           PUZZLE_ANSWER: ${{ secrets.PUZZLE_ANSWER }}
@@ -63,24 +67,30 @@ jobs:
     needs: ci
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - name: Deploy to Cloudflare Pages
-        # Argument-free `pages deploy`: wrangler.toml decides the directory,
-        # project name, and the PRESENCE KV binding. Uses the action's bundled
-        # wrangler (recent enough for pages_build_output_dir — an ancient
-        # wrangler is what trips "problem parsing the Wrangler configuration
-        # file").
-        #
-        # NOTE: `wrangler pages deploy` does NOT auto-create a project — it errors
-        # "Project not found". So create it first, idempotently: the `||` makes the
-        # create a no-op once the project exists. Pinned wrangler is recent enough
-        # for pages_build_output_dir.
-        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd  # v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "3.114.0"
-          preCommands: |
-            npx wrangler pages project create comeandget-us --production-branch=main || echo "project comeandget-us already exists — continuing"
-          command: pages deploy --commit-dirty=true
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The deploy uses the SAME wrangler the tests just ran against — the one in
+      # package-lock.json — so this repo has one wrangler version, bumped by
+      # Dependabot, instead of a second pin hidden inside a third-party action
+      # (the two had already drifted: 3.114.0 in the action, 3.114.17 in the lock).
+      #
+      # Argument-free `pages deploy`: wrangler.toml decides the directory, project
+      # name, and the PRESENCE KV binding. Never pass a positional directory — it
+      # conflicts with pages_build_output_dir.
+      #
+      # `wrangler pages deploy` does NOT auto-create a project — it errors "Project
+      # not found" — so create it first, idempotently: the `||` makes the create a
+      # no-op once the project exists.
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler pages project create comeandget-us --production-branch=main || echo "project comeandget-us already exists — continuing"
+          npx wrangler pages deploy --commit-dirty=true

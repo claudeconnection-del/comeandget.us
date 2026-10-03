@@ -1,0 +1,23 @@
+# Keeps the two things that drift while nobody is looking fresh: the npm
+# toolchain (wrangler, html-validate, playwright — the site itself has zero
+# runtime deps) and the commit-SHA pins on the GitHub Actions in deploy.yml.
+#
+# NOTE: Dependabot's pull requests run CI with Dependabot's OWN secret store,
+# not the repository's. The leak guard is fail-closed on PUZZLE_ANSWER, so add
+# that secret under Settings → Secrets and variables → Dependabot as well, or
+# every Dependabot PR will go red on "LEAK GUARD UNARMED IN CI".
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # one PR for the whole dev toolchain rather than three
+      toolchain:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
