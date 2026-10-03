@@ -52,8 +52,5 @@ export async function verifyEchoToken(signKey, token) {
   return Number.isFinite(n) ? n : null;
 }
 
-export function json(obj, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(obj), {
-    status, headers: { "content-type": "application/json; charset=utf-8", ...extraHeaders },
-  });
-}
+// Every response carries the shared security header set (functions/_shared.js).
+export { json } from "../../_shared.js";

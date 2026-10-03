@@ -260,8 +260,5 @@ export function shuffleDeterministic(arr, seed) {
   return a;
 }
 
-export const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
-
-export function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), { status, headers: JSON_HEADERS });
-}
+// Every response carries the shared security header set (functions/_shared.js).
+export { json } from "../../_shared.js";
