@@ -81,3 +81,22 @@ test("a gate cleared after arrival advances gmax past the door", async () => {
   assert.equal(entry.metadata.gmax, "g1");
   assert.ok(JSON.parse(entry.value).g.g0 != null, "the arrival stamp survives");
 });
+
+test("recordGate stamps the door and a gate in one write, and dedups the pair", async () => {
+  const KV = fakeKV();
+  let puts = 0;
+  const put = KV.put.bind(KV);
+  KV.put = async (...a) => { puts++; return put(...a); };
+  const env = { PRESENCE: KV };
+  const req = reqWith({ "user-agent": "Mozilla/5.0 (Windows NT 10.0)" });
+
+  await recordGate(env, "sid11", [ARRIVAL, "g1"], req);
+  const entry = KV.store.get("fs:sid11");
+  const rec = JSON.parse(entry.value);
+  assert.ok(rec.g.g0 != null && rec.g.g1 != null, "both stamps land");
+  assert.equal(entry.metadata.gmax, "g1");
+  assert.equal(puts, 1, "in a single write");
+
+  await recordGate(env, "sid11", [ARRIVAL, "g1"], req);
+  assert.equal(puts, 1, "a fully stamped record costs no write");
+});
