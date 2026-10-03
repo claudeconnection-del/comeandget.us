@@ -35,8 +35,6 @@ export async function verifySid(signKey, value) {
   return timingSafeEqual(sig, await hmacB64url(signKey, sid)) ? sid : null;
 }
 
-
-
 export function uaClass(request) {
   const ua = (request.headers.get("user-agent") || "").toLowerCase();
   if (!ua) return "other";
