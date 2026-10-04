@@ -34,6 +34,7 @@ page decrypts live, in the browser, when someone supplies the right name.
 site/                   # everything that crosses the threshold (deployed)
   index.html            # the front door (ARG 1: the seven + the winged one)
   veil.css  favicon.svg
+  404.html  404.css     # the miss: real 404s for every unknown path (no SPA fallback)
   _headers              # Content-Security-Policy + security headers
   js/
     wake.js             # boots the stage, schedules the feign then the wake
