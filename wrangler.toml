@@ -10,7 +10,7 @@
 
 name = "comeandget-us"
 pages_build_output_dir = "site"
-compatibility_date = "2024-12-01"
+compatibility_date = "2026-09-01"
 
 # Shared, live presence state. The KV namespace named PRESENCE has been created
 # in Cloudflare and its id is set below. `wrangler pages dev` simulates this

@@ -10,6 +10,7 @@
   X-Frame-Options: DENY
   Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
   Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000
 
 # Byte Café — the "receipt-roll" challenge: a real custom response header on one
 # artifact, so `curl -I` / DevTools Network reveals it (value is base64 of the flag).

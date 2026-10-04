@@ -14,8 +14,8 @@
     "ci": "npm run validate && npm run test:tools && npm test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.1",
-    "html-validate": "^9.5.3",
-    "wrangler": "^3.99.0"
+    "@playwright/test": "^1.63.0",
+    "html-validate": "^11.4.0",
+    "wrangler": "^4.147.0"
   }
 }

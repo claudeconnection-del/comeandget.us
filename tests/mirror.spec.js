@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+// The dossier is the slow path: collectProbes (WebGL, canvas, fonts) plus two
+// round-trips to the dev server. Under a fully parallel run it has been seen to
+// land after 8s, so every "DEVICE POSTURE" expectation waits this long instead.
+const DOSSIER_TIMEOUT = 20000;
+
 test.describe("the reflection — client probes", () => {
   test("collectProbes returns normalized shapes and never throws", async ({ page }) => {
     const errors = [];
@@ -122,7 +127,7 @@ test.describe("the reflection — client probes", () => {
 
   test("?mirror=now surfaces the device-posture dossier in the terminal", async ({ page }) => {
     await page.goto("/root/?mirror=now");
-    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: DOSSIER_TIMEOUT });
   });
 
   test("dsregcmd /status pulls the real posture; bare dsregcmd keeps the fake", async ({ page }) => {
@@ -133,12 +138,12 @@ test.describe("the reflection — client probes", () => {
     await expect(page.locator("#term")).not.toContainText("DEVICE POSTURE");
     await page.fill("#cmd", "dsregcmd /status");
     await page.press("#cmd", "Enter");
-    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: DOSSIER_TIMEOUT });
   });
 
   test("the mirror never touches the puzzle's haunt state", async ({ page }) => {
     await page.goto("/root/?mirror=now");
-    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: DOSSIER_TIMEOUT });
     const haunt = await page.evaluate(() => localStorage.getItem("cg.haunt"));
     expect(haunt, "mirror must not create/modify cg.haunt").toBeNull();
     const seen = await page.evaluate(() => localStorage.getItem("cg.mirror.seen"));
@@ -222,14 +227,14 @@ test.describe("the reflection — client probes", () => {
   test("the dossier fuses edge truth and recognizes a return end-to-end", async ({ page }) => {
     // first visit primes server memory for this browser's sigil
     await page.goto("/root/?mirror=now");
-    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: DOSSIER_TIMEOUT });
     // a real edge line only appears when cf/KV are live; locally we at least assert
     // the report renders and the return path is exercised without errors
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.reload();
     await page.goto("/root/?mirror=now");
-    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: 8000 });
+    await expect(page.locator("#term")).toContainText("DEVICE POSTURE", { timeout: DOSSIER_TIMEOUT });
     // returning line surfaces because cg.mirror.seen.count >= 2 now
     await expect(page.locator("#term")).toContainText("again", { timeout: 8000 });
     expect(errors, `reveal path errored: ${errors.join(" | ")}`).toEqual([]);

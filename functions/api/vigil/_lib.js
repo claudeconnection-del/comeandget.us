@@ -7,24 +7,9 @@
 // name sanitizer. No puzzle answer, no code, and no sign key is ever hardcoded
 // here.
 
-// ---- base64url (Workers runtime: atob/btoa + TextEncoder/Decoder) ---------
+// ---- shared primitives: base64url, HMAC, compares (functions/_shared.js) ----
 
-export function b64urlEncode(str) {
-  // UTF-8 safe: percent-encode then map to bytes, then btoa.
-  const bytes = new TextEncoder().encode(str);
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-export function b64urlDecode(s) {
-  let t = String(s).replace(/-/g, "+").replace(/_/g, "/");
-  while (t.length % 4) t += "=";
-  const bin = atob(t);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
-}
+import { b64urlEncode, b64urlDecode, hmacB64url, timingSafeEqual, sha256hex } from "../../_shared.js";
 
 // ---- the living/dead discriminator (the load-bearing oracle) --------------
 // A real id is base64url(JSON.stringify({v:1, b:<epochSeconds>, n, t, name?})).
@@ -68,37 +53,16 @@ export function hauntTier(v) {
 // Signed server-side with SIGN_KEY; verified on every beat so the roster (and
 // the proof-of-life payload the server echoes) can't be forged by a client.
 
-async function hmacRaw(signKey, msg) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(signKey),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
-  let bin = "";
-  for (const b of new Uint8Array(sig)) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
 
 const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 days; re-claim if storage clears
 
 export async function signTier(signKey, tier) {
   const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS;
   const body = b64urlEncode(`${tier}.${exp}`);
-  const sig = await hmacRaw(signKey, body);
+  const sig = await hmacB64url(signKey, body);
   return `${body}.${sig}`;
 }
 
-// Constant-time string compare (both args already strings).
-export function timingSafeEqual(a, b) {
-  if (typeof a !== "string" || typeof b !== "string") return false;
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
 
 // Returns the verified tier (1 or 2) or 0 if the token is missing/invalid/expired.
 export async function verifyTier(signKey, token) {
@@ -106,7 +70,7 @@ export async function verifyTier(signKey, token) {
   const parts = token.split(".");
   if (parts.length !== 2) return 0;
   const [body, sig] = parts;
-  const expect = await hmacRaw(signKey, body);
+  const expect = await hmacB64url(signKey, body);
   if (!timingSafeEqual(sig, expect)) return 0;
   let decoded;
   try {
@@ -136,10 +100,6 @@ const FORBIDDEN_HASHES = [
   { len: 11, hash: "6929adae851d8522fccccc1cd3059119748cc66eeb8168ce7e5e7c79b98d7d63" },
 ];
 
-async function sha256hex(str) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 // True if `low` (already lowercased) contains a forbidden word as a substring.
 // Only same-length windows are hashed, so the work is bounded (name ≤ 24 chars).
@@ -260,8 +220,5 @@ export function shuffleDeterministic(arr, seed) {
   return a;
 }
 
-export const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
-
-export function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), { status, headers: JSON_HEADERS });
-}
+// Every response carries the shared security header set (functions/_shared.js).
+export { json } from "../../_shared.js";

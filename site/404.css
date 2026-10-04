@@ -1,0 +1,38 @@
+/* The miss. Served by Pages for every path that isn't there (and so, with this
+   file present, those paths are real 404s rather than the front door with a
+   200). Rides veil.css for the palette and type; only the differences live here. */
+
+body.lost .ghost {
+  /* pinned to the viewport, not to main, so the watermark sits behind the text
+     rather than spilling below it */
+  position: fixed;
+  font-size: clamp(6rem, 30vw, 20rem);
+  color: #0c0c0e;
+}
+
+.way {
+  margin-top: 2.4rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+}
+.way a {
+  color: var(--dim);
+  text-decoration: none;
+  border-bottom: 1px solid var(--dimmer);
+  padding-bottom: 0.15em;
+  transition: color 0.6s ease, border-color 0.6s ease;
+}
+.way a:hover,
+.way a:focus-visible {
+  color: var(--blood);
+  border-color: var(--blood-soft);
+}
+.way a:focus-visible {
+  outline: 1px dashed var(--blood-soft);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.lost .cursor,
+  body.lost .subtle.breathe { animation: none; }
+}

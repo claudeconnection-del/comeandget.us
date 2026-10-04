@@ -13,6 +13,7 @@
 
 import { summarize, reconcile, fromRollup, ARRIVAL_KEY, RUNGS } from "../_progress.js";
 import { verifySid } from "../_funnel.js";
+import { withSecurityHeaders, readCookie } from "../../_shared.js";
 
 const PREFIX = "fs:";        // never "f:" — that would sweep the rollup key in
 const ROLLUP_KEY = "f:rollup";
@@ -28,12 +29,12 @@ const refreshAfter = (env) => {
   return Number.isFinite(n) && n >= 0 ? n : REFRESH_SECONDS;
 };
 
-const JSON_HEADERS = {
+const JSON_HEADERS = withSecurityHeaders({
   "content-type": "application/json; charset=utf-8",
   // the payload carries the viewer's own position, so it is never shared
   "cache-control": "private, max-age=30",
   vary: "Cookie",
-};
+});
 
 const reply = (obj) => new Response(JSON.stringify(obj), { status: 200, headers: JSON_HEADERS });
 
@@ -49,11 +50,6 @@ const unavailable = (reason, err) =>
     ...(err ? { detail: `${err.name || "Error"}: ${String(err.message || err).slice(0, 160)}` } : {}),
   });
 
-function readCookie(request, name) {
-  const raw = request.headers.get("Cookie") || "";
-  const m = raw.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
-  return m ? m[1] : null;
-}
 
 async function listAll(KV) {
   const keys = [];

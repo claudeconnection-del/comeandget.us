@@ -7,25 +7,7 @@
 //     solver is counted once per gate and time-to-solve falls out of the stamps.
 // Fail-soft throughout: telemetry must never break the response it rides on.
 
-const enc = new TextEncoder();
-
-async function hmac(signKey, msg) {
-  const key = await crypto.subtle.importKey(
-    "raw", enc.encode(String(signKey || "")),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(String(msg)));
-  let bin = "";
-  for (const b of new Uint8Array(sig)) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function eq(a, b) {
-  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
-}
+import { hmacB64url, timingSafeEqual } from "../_shared.js";
 
 function randSid() {
   const a = new Uint8Array(16);
@@ -39,7 +21,7 @@ const MAX_AGE = 7776000; // 90 days
 
 export async function mintSid(signKey) {
   const sid = randSid();
-  const value = sid + "." + (await hmac(signKey, sid));
+  const value = sid + "." + (await hmacB64url(signKey, sid));
   const cookie = `rg=${value}; Secure; HttpOnly; SameSite=Lax; Path=/root; Max-Age=${MAX_AGE}`;
   return { sid, value, cookie };
 }
@@ -50,20 +32,7 @@ export async function verifySid(signKey, value) {
   if (i < 0) return null;
   const sid = value.slice(0, i);
   const sig = value.slice(i + 1);
-  return eq(sig, await hmac(signKey, sid)) ? sid : null;
-}
-
-function readCookie(request, name) {
-  const raw = request.headers.get("Cookie") || "";
-  const m = raw.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
-  return m ? m[1] : null;
-}
-
-export async function getOrMintSid(request, signKey) {
-  const existing = await verifySid(signKey, readCookie(request, "rg"));
-  if (existing) return { sid: existing, setCookie: null };
-  const { sid, cookie } = await mintSid(signKey);
-  return { sid, setCookie: cookie };
+  return timingSafeEqual(sig, await hmacB64url(signKey, sid)) ? sid : null;
 }
 
 export function uaClass(request) {
@@ -83,9 +52,14 @@ const GATE_ORDER = ["g0", "g1", "g2", "g3", "g4seal", "g4open"];
 
 export const ARRIVAL = "g0";
 
-export async function recordGate(env, sid, gate, request) {
+// Stamp one gate, or several at once (a cookie-bearing gate fetch stamps the door
+// and the gate in a single write). Deduped per gate: a solver is counted once per
+// gate, and a record that already holds every requested stamp costs no write.
+export async function recordGate(env, sid, gates, request) {
   const KV = env && env.PRESENCE;
   if (!KV || !sid) return;
+  const wanted = (Array.isArray(gates) ? gates : [gates]).filter(Boolean);
+  if (!wanted.length) return;
   const key = `fs:${sid}`;
   const nowSec = Math.floor(Date.now() / 1000);
 
@@ -93,11 +67,12 @@ export async function recordGate(env, sid, gate, request) {
   try { rec = await KV.get(key, "json"); } catch { rec = null; }
   if (!rec || typeof rec !== "object") rec = { first: nowSec, g: {} };
   if (!rec.g || typeof rec.g !== "object") rec.g = {};
-  if (rec.g[gate]) return; // dedup: this solver already cleared this gate
+  const missing = wanted.filter((g) => !rec.g[g]);
+  if (!missing.length) return; // dedup: this solver already cleared all of these
 
-  rec.g[gate] = nowSec;
+  for (const g of missing) rec.g[g] = nowSec;
   rec.ua = uaClass(request);
-  const gmax = GATE_ORDER.filter((g) => rec.g[g]).pop() || gate;
+  const gmax = GATE_ORDER.filter((g) => rec.g[g]).pop() || missing[missing.length - 1];
 
   try {
     await KV.put(key, JSON.stringify(rec), {

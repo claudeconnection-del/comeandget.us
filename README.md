@@ -34,6 +34,7 @@ page decrypts live, in the browser, when someone supplies the right name.
 site/                   # everything that crosses the threshold (deployed)
   index.html            # the front door (ARG 1: the seven + the winged one)
   veil.css  favicon.svg
+  404.html  404.css     # the miss: real 404s for every unknown path (no SPA fallback)
   _headers              # Content-Security-Policy + security headers
   js/
     wake.js             # boots the stage, schedules the feign then the wake
@@ -43,6 +44,7 @@ site/                   # everything that crosses the threshold (deployed)
   root/                 # the rabbit hole (ARG 2: an M365/Intune honeypot)
     index.html  ember.css  js/*.js  check-in.json  transmissions.json
   CNAME                 # the true name of this place
+functions/_shared.js    # the one copy: security headers, base64url/HMAC, compares, cookies
 functions/api/vigil/    # Cloudflare Pages Functions: live presence ("vigil") + KV
 functions/root/         # middleware: self-declared AI crawlers get a decoy variant
 tests/smoke.spec.js     # proves the door works and leaks nothing (never deployed)
@@ -61,7 +63,7 @@ npm run dev          # wrangler pages dev — serves site/ + functions/ locally
 
 `.github/workflows/deploy.yml`:
 
-1. **ci** — `npm run validate` (HTML) + `npm test` (Playwright, via
+1. **ci** — `npm run validate` (HTML) + `npm run test:tools` (node unit tests) + `npm test` (Playwright, via
    `wrangler pages dev`): the page loads, a hidden being answers, the true key
    unseals the sigil and constructs the mailbox, the vigil API serves a roster
    without leaking, and — if a `PUZZLE_ANSWER` secret is configured — nothing in

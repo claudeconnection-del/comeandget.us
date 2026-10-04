@@ -4,7 +4,7 @@
 // Reuses PRESENCE + SIGN_KEY; sets one disguised cookie (fpc). Never 500s: every
 // edge field and KV op degrades to omission.
 
-import { b64url, b64urlDecode, hmacB64url, timingSafeEqual, json } from "./_lib.js";
+import { b64urlEncode as b64url, b64urlDecode, hmacB64url, timingSafeEqual, readCookie, json } from "../../_shared.js";
 
 const TTL = 7776000; // 90 days
 const COOKIE = "fpc"; // Microsoft's own "fingerprint cookie" name — the costume
@@ -24,11 +24,6 @@ async function fpcFirstSeen(signKey, value) {
   if (!timingSafeEqual(parts[1], await hmacB64url(signKey, "fpc." + parts[0]))) return null;
   const n = Number(b64urlDecode(parts[0]));
   return Number.isFinite(n) ? n : null;
-}
-function readCookie(request, name) {
-  const raw = request.headers.get("Cookie") || "";
-  const m = raw.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
-  return m ? m[1] : null;
 }
 
 function readEdge(cf) {
