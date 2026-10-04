@@ -10,8 +10,7 @@ permissions:
   contents: read
 
 # Supply chain: third-party actions are pinned to immutable commit SHAs (the
-# trailing `# vN` is the human-readable tag). Dependabot (.github/dependabot.yml)
-# proposes bumps; to re-resolve one by hand:
+# trailing `# vN` is the human-readable tag). To bump one, re-resolve with
 #   git ls-remote https://github.com/<owner>/<action> refs/tags/<vN>
 # and update BOTH the SHA and its comment.
 
@@ -76,9 +75,9 @@ jobs:
           cache: npm
       - run: npm ci
       # The deploy uses the SAME wrangler the tests just ran against — the one in
-      # package-lock.json — so this repo has one wrangler version, bumped by
-      # Dependabot, instead of a second pin hidden inside a third-party action
-      # (the two had already drifted: 3.114.0 in the action, 3.114.17 in the lock).
+      # package-lock.json — so this repo has one wrangler version, bumped in one
+      # place, instead of a second pin hidden inside a third-party action (the two
+      # had already drifted: 3.114.0 in the action, 3.114.17 in the lock).
       #
       # Argument-free `pages deploy`: wrangler.toml decides the directory, project
       # name, and the PRESENCE KV binding. Never pass a positional directory — it
